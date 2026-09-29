@@ -102,12 +102,12 @@ def cmd_video(scale, t_from, t_to, out, workers, crf):
     ff = imageio_ffmpeg.get_ffmpeg_exe()
     w, h = int(round(W * scale)), int(round(H * scale))
     f0, f1 = int(round(t_from * FPS)), int(round(t_to * FPS))
-    wav = os.path.join(BUILD, "soundtrack.wav")
+    wav = os.environ.get("FILM_WAV", os.path.join(BUILD, "soundtrack.wav"))
     cmd = [ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgra", "-s", f"{w}x{h}", "-r", str(FPS),
            "-i", "-"]
     if os.path.exists(wav):
         cmd += ["-ss", f"{t_from:.3f}", "-t", f"{(f1 - f0) / FPS:.3f}", "-i", wav]
-    cmd += ["-c:v", "libx264", "-preset", "slow", "-crf", str(crf), "-pix_fmt", "yuv420p", "-profile:v", "high",
+    cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", str(crf), "-pix_fmt", "yuv420p", "-profile:v", "high",
             "-tune", "film", "-movflags", "+faststart"]
     if os.path.exists(wav):
         cmd += ["-c:a", "aac", "-b:a", "256k", "-shortest"]

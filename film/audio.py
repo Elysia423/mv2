@@ -624,10 +624,19 @@ class Score:
         send = (pad * 0.5 + arp * 0.6 + lead * 0.5 + b["drums"] * 0.15 + b["fx"] * 0.5 + b["bell"] * 1.0
                 + b["tone"] * 0.25 + b["chord"] * 0.35 + lead_fx * 0.5)
         wet = reverb(send, 0.55, 3.5, 0.6)
-        out = dry + wet
+        out = (dry + wet) * self.master_env()
         # glue: gentle compression + limiter
         out = self.limit(out)
         return out.astype(np.float32)
+
+    def master_env(self):
+        """A held breath before the title impact, and a clean fade at the very end."""
+        t = np.arange(N) / SR
+        g = np.ones(N)
+        suck = np.clip((t - 15.0) / 0.15, 0, 1) * np.clip((16.0 - t) / 0.02, 0, 1)
+        g *= 1 - 0.96 * suck
+        g *= np.clip((S.DURATION - t) / 2.6, 0, 1) ** 1.5
+        return g
 
     def limit(self, x, ceiling=0.93):
         from scipy.ndimage import maximum_filter1d

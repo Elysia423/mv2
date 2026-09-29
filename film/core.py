@@ -584,7 +584,7 @@ def bloom(img, strength=0.9, threshold=0.12):
     return img + strength * acc
 
 
-def postprocess(bgra, frame_idx, bloom_amt=0.9, overlay=None, fade=1.0, flash=0.0, grain=0.018,
+def postprocess(bgra, frame_idx, bloom_amt=0.9, overlay=None, fade=1.0, flash=0.0, grain=0.004,
                 chroma=0.0, exposure=1.0):
     """bgra: uint8 HxWx4 from cairo (opaque). overlay: uint8 premultiplied BGRA to composite after bloom.
     Returns uint8 HxWx4 BGRA."""
