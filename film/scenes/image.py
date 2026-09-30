@@ -26,11 +26,13 @@ class ImageBase(Scene):
     _shared = None
 
     def prepare(self):
-        if ImageBase._shared is not None:
-            self.__dict__.update(ImageBase._shared)
-            return
-        self._prepare()
-        ImageBase._shared = dict(self.__dict__)
+        # share only what _prepare() computes: the instance also carries per-shot settings (its transition,
+        # motion blur) that must not leak from the first image shot into the others
+        if ImageBase._shared is None:
+            before = set(self.__dict__)
+            self._prepare()
+            ImageBase._shared = {k: v for k, v in self.__dict__.items() if k not in before}
+        self.__dict__.update(ImageBase._shared)
 
     def _prepare(self):
         img = image("chelsea", (IH, IW), gray=False)[..., :3]
