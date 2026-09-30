@@ -15,15 +15,34 @@ from ..three import Camera, line3, line3_depth, axis3
 from .base import Scene
 
 
-def vignette_title(ctx, lt, zh, en, sub=None, x=110, y=150):
+def vignette_title(ctx, lt, zh, en, sub=None, x=110, y=150, layout="tl"):
+    """Shot title. layout: 'tl' top-left, 'tr' top-right, 'tc' top-centre, 'v' vertical along the left edge."""
     a = smooth(lt / 0.4)
-    draw_text_chars(ctx, zh, x, y, lt, size=66, font="serif", weight=800, color=WHITE, alpha=a, anchor="left",
+    if layout == "v":
+        for i, ch in enumerate(zh):
+            ai = smooth((lt - 0.06 * i) / 0.3)
+            draw_text(ctx, ch, 110, 250 + i * 84, size=72, font="serif", weight=800, color=WHITE, alpha=ai,
+                      glow=10, glow_alpha=0.35)
+        yy = 250 + len(zh) * 84 + 10
+        draw_text(ctx, en, 110, yy, size=22, font="latin", weight=600, color=GOLD, alpha=0.85 * smooth((lt - 0.2) / 0.5),
+                  tracking=0.1)
+        if sub:
+            for i, ch in enumerate(sub):
+                draw_text(ctx, ch, 190, 262 + i * 38, size=30, font="sans", weight=400, color=(0.85, 0.9, 1.0),
+                          alpha=0.8 * smooth((lt - 0.5 - 0.02 * i) / 0.4))
+        return
+    anchor = {"tl": "left", "tr": "right", "tc": "center"}[layout]
+    if layout == "tr":
+        x = W - 110
+    elif layout == "tc":
+        x = W / 2
+    draw_text_chars(ctx, zh, x, y, lt, size=66, font="serif", weight=800, color=WHITE, alpha=a, anchor=anchor,
                     tracking=0.12, stagger=0.06, dur=0.35, rise=12, glow=10, glow_alpha=0.35)
-    draw_text(ctx, en, x + 3, y + 56, size=15, font="latin", weight=600, color=GOLD, alpha=0.85 * smooth((lt - 0.2) / 0.5),
-              anchor="left", tracking=0.45)
+    draw_text(ctx, en, x + (3 if anchor == "left" else 0), y + 56, size=24, font="latin", weight=600, color=GOLD,
+              alpha=0.85 * smooth((lt - 0.2) / 0.5), anchor=anchor, tracking=0.18)
     if sub:
-        draw_text(ctx, sub, x + 2, y + 98, size=22, font="sans", weight=400, color=(0.85, 0.9, 1.0),
-                  alpha=0.8 * smooth((lt - 0.5) / 0.5), anchor="left", tracking=0.06)
+        draw_text(ctx, sub, x + (2 if anchor == "left" else 0), y + 98, size=30, font="sans", weight=400,
+                  color=(0.85, 0.9, 1.0), alpha=0.8 * smooth((lt - 0.5) / 0.5), anchor=anchor, tracking=0.06)
 
 
 class Vignette(Scene):
@@ -41,32 +60,38 @@ class Vignette(Scene):
 
 # ---------------------------------------------------------------------- header
 class BeyondHeader(Scene):
+    """Title card over the real Hubble eXtreme Deep Field, slowly pushing in."""
     start, end = S.T_BEYOND, S.T_BEYOND + 4.0
     fade_out = 0.25
-    bloom = 1.0
+    bloom = 0.6
+
+    def prepare(self):
+        from ..data import image
+        self.xdf = image("hubble_deep_field", None, gray=False)[..., :3]
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
-        background(ctx, t, strength=1.3, hue=(0.05, 0.04, 0.12))
-        # radial burst of sine rays
-        n = 36
-        for i in range(n):
-            ang = i / n * 2 * math.pi + 0.05 * lt
-            L0 = 140 + 40 * math.sin(i * 1.7)
-            L1 = L0 + 900 * ease_out(lt / 1.6, 3)
-            r = np.linspace(L0, L1, 160)
-            amp = 10 * np.sin(r * 0.05 - lt * 8 + i) * np.exp(-(r - L0) / 600)
-            xs = W / 2 + r * math.cos(ang) - amp * math.sin(ang)
-            ys = H / 2 + r * math.sin(ang) + amp * math.cos(ang)
-            col = hsv(i / n, 0.7, 1.0)
-            stroke_poly(ctx, np.stack([xs, ys], 1), col, 1.6, 0.5 * (1 - smooth((lt - 2.8) / 1.0)))
-        s = 1.25 - 0.25 * ease_out_expo(lt / 1.2)
+        ctx.set_source_rgb(0, 0, 0)
+        ctx.paint()
+        h, w = self.xdf.shape[:2]
+        z = 1.0 + 0.12 * lt / 4.0
+        surf = surface_from_array(self.xdf * 0.8)
+        sc = max(W / w, H / h) * z
+        paint_image(ctx, surf, W / 2, H / 2, w * sc, h * sc, smooth(lt / 0.3))
+        g = cairo.RadialGradient(W / 2, H / 2, 100, W / 2, H / 2, W * 0.6)
+        g.add_color_stop_rgba(0, 0, 0, 0, 0.55)
+        g.add_color_stop_rgba(1, 0, 0, 0, 0.15)
+        ctx.set_source(g)
+        ctx.paint()
+        s_ = 1.25 - 0.25 * ease_out_expo(lt / 1.2)
         draw_text(ctx, "不止于此", W / 2, H / 2 - 30, size=150, font="serif", weight=900, color=WHITE,
-                  alpha=smooth(lt / 0.2), tracking=0.3, glow=18, glow_alpha=0.5, scale=s)
-        draw_text(ctx, "AND  BEYOND", W / 2, H / 2 + 90, size=24, font="latin", weight=300, color=GOLD, alpha=0.9,
+                  alpha=smooth(lt / 0.2), tracking=0.18, glow=18, glow_alpha=0.5, scale=s_)
+        draw_text(ctx, "AND  BEYOND", W / 2, H / 2 + 90, size=32, font="latin", weight=300, color=GOLD, alpha=0.9,
                   tracking=0.9, reveal=ease_out((lt - 0.6) / 1.2, 2))
-        draw_text_chars(ctx, "从星辰到基因，从大脑到人工智能", W / 2, H / 2 + 170, lt - 1.3, size=30, font="sans",
-                        weight=400, color=(0.85, 0.9, 1.0), alpha=0.9, tracking=0.2, stagger=0.05)
+        draw_text_chars(ctx, "从星辰到基因，从大脑到人工智能", W / 2, H / 2 + 170, lt - 1.3, size=36, font="sans",
+                        weight=400, color=(0.9, 0.93, 1.0), alpha=0.95, tracking=0.2, stagger=0.05)
+        draw_text(ctx, "哈勃极深场 · NASA / ESA（真实照片）", W - 60, H - 170, size=24, font="sans", weight=400,
+                  color=WHITE, alpha=0.6 * smooth((lt - 1.0) / 0.5), anchor="right")
 
     def effects(self, t, lt):
         return {"flash": 0.7 * math.exp(-lt / 0.2), "chroma": 4 * math.exp(-lt / 0.4)}
@@ -94,29 +119,85 @@ def wl_rgb(wl):
     return (r * f, g * f, b * f)
 
 
+# (air wavelength nm, depth, half-width nm) of the strongest solar absorption lines, plus telluric O2 bands
+SOLAR_LINES = [
+    (656.28, 0.82, 0.10), (486.13, 0.80, 0.09), (434.05, 0.74, 0.08), (410.17, 0.70, 0.07),
+    (589.59, 0.82, 0.05), (588.99, 0.86, 0.05), (518.36, 0.82, 0.05), (517.27, 0.78, 0.05), (516.73, 0.72, 0.05),
+    (527.04, 0.62, 0.03), (526.95, 0.55, 0.03), (422.67, 0.82, 0.05), (430.8, 0.55, 0.25), (404.58, 0.72, 0.03),
+    (406.36, 0.62, 0.03), (407.17, 0.62, 0.03), (432.58, 0.70, 0.03), (438.35, 0.75, 0.03), (440.48, 0.66, 0.03),
+    (492.05, 0.55, 0.02), (495.76, 0.60, 0.02), (501.21, 0.45, 0.02), (516.89, 0.55, 0.02), (522.72, 0.55, 0.02),
+    (532.80, 0.60, 0.02), (537.15, 0.58, 0.02), (539.71, 0.58, 0.02), (540.58, 0.55, 0.02), (543.45, 0.50, 0.02),
+    (544.69, 0.55, 0.02), (561.56, 0.45, 0.02), (606.55, 0.40, 0.02), (613.66, 0.45, 0.02), (623.07, 0.42, 0.02),
+    (625.26, 0.40, 0.02), (641.17, 0.45, 0.02), (649.50, 0.40, 0.02), (643.08, 0.40, 0.02), (612.22, 0.45, 0.02),
+    (616.22, 0.50, 0.02), (644.98, 0.40, 0.02), (671.8, 0.30, 0.02),
+]
+TELLURIC = [(686.7, 688.4, 0.9), (627.6, 629.0, 0.55), (694.0, 697.0, 0.35)]
+LINE_LABELS = [(656.28, "Hα"), (589.29, "Na D"), (517.3, "Mg b"), (486.13, "Hβ"), (527.0, "Fe"), (430.8, "G"),
+               (434.05, "Hγ"), (422.67, "Ca")]
+
+
+def solar_spectrum(wl, seed=4):
+    """Continuum x absorption lines at the real Fraunhofer positions (weak lines scattered at random)."""
+    T = 5772.0
+    lam = wl * 1e-9
+    bb = 1 / (lam ** 5 * (np.exp(1.4388e-2 / (lam * T)) - 1))
+    bb = bb / bb.max()
+    trans = np.ones_like(wl)
+    for c, d, w in SOLAR_LINES:
+        w = w * 2.5  # widened so the lines survive on screen
+        trans *= 1 - d / (1 + ((wl - c) / w) ** 2)
+    for a0, a1, d in TELLURIC:
+        band = np.clip(1 - np.abs(wl - (a0 + a1) / 2) / ((a1 - a0) / 2), 0, 1)
+        trans *= 1 - d * band * (0.6 + 0.4 * np.cos(wl * 60) ** 2)
+    rng = np.random.default_rng(seed)
+    n = 900
+    cs = np.sort(rng.uniform(400, 700, n) ** 1.0)
+    ds = rng.uniform(0.04, 0.35, n) * np.clip((720 - cs) / 200, 0.3, 1.2)
+    ws = rng.uniform(0.02, 0.05, n)
+    for c, d, w in zip(cs, ds, ws):
+        m = np.abs(wl - c) < 0.2
+        trans[m] *= 1 - d / (1 + ((wl[m] - c) / w) ** 2)
+    return bb, trans
+
+
 class Prism(Vignette):
+    bloom = 0.35
+    ROWS = 12
+    WL0, WL1 = 400.0, 700.0
+
+    def prepare(self):
+        n = 3000
+        span = (self.WL1 - self.WL0) / self.ROWS
+        rows = []
+        for r in range(self.ROWS):
+            hi = self.WL1 - r * span
+            wl = np.linspace(hi - span, hi, n)
+            bb, tr = solar_spectrum(wl)
+            col = np.array([wl_rgb(x) for x in wl[::10]])
+            col = np.repeat(col, 10, axis=0)[:n]
+            rows.append(np.clip(col * (0.35 + 0.35 * bb[:, None]) * tr[:, None], 0, 1))
+        self.rows = rows
+        self.span = span
+
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.5)
-        cx, cy, side = 760.0, 500.0, 330.0
+        cx, cy, side = 470.0, 560.0, 300.0
         hgt = side * math.sqrt(3) / 2
         A = (cx, cy - hgt * 2 / 3)
         B = (cx - side / 2, cy + hgt / 3)
         C = (cx + side / 2, cy + hgt / 3)
-        # entry and exit points
         pin = (lerp(A[0], B[0], 0.55), lerp(A[1], B[1], 0.55))
         pout_mid = (lerp(A[0], C[0], 0.58), lerp(A[1], C[1], 0.58))
-        beam = ease_out(lt / 0.5, 2)
-        src = (0.0, pin[1] - 150)
-        bx = lerp(src[0], pin[0], beam)
-        by = lerp(src[1], pin[1], beam)
+        beam = ease_out(lt / 0.45, 2)
+        src = (0.0, pin[1] - 120)
+        bx, by = lerp(src[0], pin[0], beam), lerp(src[1], pin[1], beam)
         for wdt, al in [(18, 0.06), (8, 0.15), (3, 0.9)]:
             ctx.move_to(*src)
             ctx.line_to(bx, by)
             set_rgba(ctx, WHITE, al)
             ctx.set_line_width(wdt)
             ctx.stroke()
-        # prism body
         polyline(ctx, [A, B, C], close=True)
         g = cairo.LinearGradient(B[0], B[1], C[0], A[1])
         g.add_color_stop_rgba(0, 0.5, 0.7, 1.0, 0.10)
@@ -126,67 +207,60 @@ class Prism(Vignette):
         set_rgba(ctx, (0.8, 0.9, 1.0), 0.8)
         ctx.set_line_width(2)
         ctx.stroke()
-        fan = ease_out((lt - 0.4) / 0.5, 2)
-        screen_x, y0, y1 = 1500.0, 250.0, 780.0
+        # the atlas panel
+        px0, px1, py0, rh, gap = 880.0, 1810.0, 250.0, 34.0, 8.0
+        fan = ease_out((lt - 0.35) / 0.5, 2)
         if fan > 0:
-            nr = 90
+            nr = 80
             for i in range(nr):
                 u = i / (nr - 1)
-                wl = 700 - 300 * u
-                col = wl_rgb(wl)
-                # inside the prism
-                pm = (pout_mid[0] + (u - 0.5) * 18, pout_mid[1] + (u - 0.5) * 30)
+                col = wl_rgb(700 - 300 * u)
+                pm = (pout_mid[0] + (u - 0.5) * 16, pout_mid[1] + (u - 0.5) * 26)
                 ctx.move_to(*pin)
                 ctx.line_to(*pm)
                 set_rgba(ctx, col, 0.08)
                 ctx.set_line_width(2)
                 ctx.stroke()
-                ty = lerp(y0, y1, u)
-                ex = lerp(pm[0], screen_x, fan)
-                ey = lerp(pm[1], ty, fan)
+                ty = py0 + u * (self.ROWS * (rh + gap))
                 ctx.move_to(*pm)
-                ctx.line_to(ex, ey)
+                ctx.line_to(lerp(pm[0], px0, fan), lerp(pm[1], ty, fan))
                 set_rgba(ctx, col, 0.10)
                 ctx.set_line_width(4)
                 ctx.stroke()
-        # spectrum strip with absorption lines
-        st = smooth((lt - 0.85) / 0.4)
-        if st > 0:
-            n = 300
-            for i in range(n):
-                u = i / n
-                wl = 700 - 300 * u
-                set_rgba(ctx, wl_rgb(wl), st)
-                ctx.rectangle(screen_x, lerp(y0, y1, u), 70, (y1 - y0) / n + 1)
-                ctx.fill()
-            for k, (wl, el) in enumerate(FRAUNHOFER):
-                a = smooth((lt - 1.2 - 0.12 * k) / 0.25)
-                if a <= 0:
-                    continue
-                u = (700 - wl) / 300
-                y = lerp(y0, y1, u)
-                set_rgba(ctx, (0, 0, 0), 0.92 * a)
-                ctx.rectangle(screen_x - 2, y - 3.5, 74, 7)
-                ctx.fill()
-                ctx.move_to(screen_x + 80, y)
-                ctx.line_to(screen_x + 110, y)
-                set_rgba(ctx, WHITE, 0.5 * a)
-                ctx.set_line_width(1)
-                ctx.stroke()
-                draw_text(ctx, el, screen_x + 118, y, size=22, font="latin", weight=600, color=WHITE, alpha=0.95 * a,
-                          anchor="left")
-                draw_text(ctx, f"{wl:.0f} nm", screen_x + 118 + 18 * len(el) + 16, y + 1, size=13, font="mono",
-                          weight=300, color=WHITE, alpha=0.5 * a, anchor="left")
-        # helium: a bright emission line seen in the solar chromosphere during the 1868 eclipse
+        for r, row in enumerate(self.rows):
+            a = smooth((lt - 0.75 - 0.05 * r) / 0.3)
+            if a <= 0:
+                continue
+            y = py0 + r * (rh + gap)
+            paint_image(ctx, surface_from_array(row[None, :, :] * np.ones((4, 1, 1))), px0, y, px1 - px0, rh, a,
+                        anchor="topleft", filt=cairo.FILTER_BEST)
+        la = smooth((lt - 1.5) / 0.4)
+        if la > 0:
+            for wl, lab in LINE_LABELS:
+                r = int((self.WL1 - wl) // self.span)
+                x = px0 + (wl - (self.WL1 - (r + 1) * self.span)) / self.span * (px1 - px0)
+                y = py0 + r * (rh + gap)
+                draw_text(ctx, lab, x, y - 13, size=24, font="sans", weight=700, color=WHITE, alpha=0.9 * la)
+        # helium: the yellow emission line seen in the 1868 eclipse
         ah = smooth((lt - 2.2) / 0.3)
         if ah > 0:
-            y = lerp(y0, y1, (700 - 587.6) / 300)
-            set_rgba(ctx, (1.0, 1.0, 0.85), ah)
-            ctx.rectangle(screen_x - 6, y - 1.5, 82, 3)
+            wl = 587.56
+            r = int((self.WL1 - wl) // self.span)
+            x = px0 + (wl - (self.WL1 - (r + 1) * self.span)) / self.span * (px1 - px0)
+            y = py0 + r * (rh + gap)
+            set_rgba(ctx, (1.0, 1.0, 0.8), ah)
+            ctx.rectangle(x - 2, y - 6, 4, rh + 12)
             ctx.fill()
-            draw_text(ctx, "He  587.6 nm · 1868", screen_x - 20, y - 2, size=22, font="latin", weight=700,
-                      color=(1.0, 0.95, 0.6), alpha=ah, anchor="right", glow=6, glow_alpha=0.5)
-        vignette_title(ctx, lt, "光谱", "SPECTRUM", "棱镜：把阳光按频率展开")
+            circle(ctx, x, y + rh / 2, 30, (1.0, 0.95, 0.6), 0.9 * ah, width=2.5)
+            yb = py0 + self.ROWS * (rh + gap) + 20
+            ctx.move_to(x, y + rh / 2 + 30)
+            ctx.line_to(x, yb)
+            set_rgba(ctx, (1.0, 0.95, 0.6), 0.8 * ah)
+            ctx.set_line_width(1.5)
+            ctx.stroke()
+            draw_text(ctx, "氦 He · 1868 年日食中首次观测到", x + 14, yb + 16, size=30, font="sans", weight=700,
+                      color=(1.0, 0.95, 0.6), alpha=ah, anchor="left", glow=6, glow_alpha=0.5)
+        vignette_title(ctx, lt, "光谱", "SPECTRUM", "棱镜：把阳光按频率展开", y=130)
 
 
 # ---------------------------------------------------------------------- 2. DNA
@@ -265,18 +339,18 @@ class DNA(Vignette):
             ctx.set_line_width(3)
             ctx.stroke()
             arrow(ctx, 900, 520, lerp(900, 1110, bx), 520, WHITE, 0.6 * bx, 2, 14)
-            draw_text(ctx, "X 射线", 925, 490, size=20, font="sans", weight=500, color=WHITE, alpha=0.8 * bx, anchor="left")
+            draw_text(ctx, "X 射线", 925, 490, size=28, font="sans", weight=500, color=WHITE, alpha=0.8 * bx, anchor="left")
         rev = smooth((lt - 0.7) / 0.8)
         if rev > 0:
             vis = apply_lut(self.diff * rev, LUT_GOLD)
             surf = surface_from_array(vis)
             paint_image(ctx, surf, 1400, 520, 440, 440, 1.0)
             circle(ctx, 1400, 520, 222, (0.8, 0.7, 0.5), 0.35 * rev, width=1.5)
-            draw_text(ctx, "Photo 51 · 1952", 1400, 780, size=22, font="latin", weight=500, color=GOLD, alpha=rev,
+            draw_text(ctx, "Photo 51 · 1952", 1400, 780, size=30, font="latin", weight=500, color=GOLD, alpha=rev,
                       tracking=0.1)
-            draw_text(ctx, "罗莎琳德·富兰克林", 1400, 812, size=18, font="sans", weight=400, color=WHITE,
+            draw_text(ctx, "罗莎琳德·富兰克林", 1400, 812, size=28, font="sans", weight=400, color=WHITE,
                       alpha=0.6 * rev)
-        vignette_title(ctx, lt, "DNA", "PHOTO 51 · 1952", "X 射线衍射图 = 分子的傅里叶变换")
+        vignette_title(ctx, lt, "双螺旋", "DNA · PHOTO 51 · 1952", "衍射图记录分子的傅里叶变换", layout="v")
 
 
 # ---------------------------------------------------------------------- 3. MRI
@@ -324,95 +398,104 @@ class MRI(Vignette):
             ctx.stroke()
         arrow(ctx, kx + s / 2 + 30, y, ix - s / 2 - 30, y, GOLD, a * 0.9, 2.5, 16)
         draw_math(ctx, r"$\mathcal{F}^{-1}$", (kx + ix) / 2, y - 40, size=36, color=GOLD, alpha=a)
-        draw_text(ctx, "k 空间（频率）", kx, y + s / 2 + 40, size=22, font="sans", weight=500, color=CYAN, alpha=a)
-        draw_text(ctx, "大脑图像", ix, y + s / 2 + 40, size=22, font="sans", weight=500, color=WHITE, alpha=a)
-        vignette_title(ctx, lt, "核磁共振", "MRI · k-SPACE", "扫描仪测量的，其实是频率", x=110, y=110)
+        draw_text(ctx, "k 空间（频率）", kx, y + s / 2 + 40, size=30, font="sans", weight=500, color=CYAN, alpha=a)
+        draw_text(ctx, "大脑图像", ix, y + s / 2 + 40, size=30, font="sans", weight=500, color=WHITE, alpha=a)
+        vignette_title(ctx, lt, "核磁共振", "MRI · k-SPACE", "扫描仪测量的，其实是频率", y=110, layout="tc")
 
 
 # ---------------------------------------------------------------------- 4. gravitational waves
 class GW(Vignette):
+    """Two black holes spiral in (illustration) next to the real LIGO GW150914 strain and its wavelet map."""
     T_MERGE = S.GW_MERGE
     T_START = S.T_GW
+    PEAK = -0.015           # peak of the real signal relative to the catalogue event time (s)
+    WIN = (-0.20, 0.05)     # real-time window shown
 
     def f_of(self, t):
         tm = self.T_MERGE - self.T_START
         tau = max(self.T_MERGE - t, 1e-3)
         return min(420.0, 55 * (tau / tm) ** (-3 / 8)) if t < self.T_MERGE else 420.0
 
+    def real_t(self, t):
+        k = (self.PEAK - self.WIN[0]) / (self.T_MERGE - (self.T_START + 0.2))
+        return self.PEAK + (t - self.T_MERGE) * k
+
     def prepare(self):
+        import os
+        from ..core import ROOT
         ts = np.arange(self.T_START - 1.0, self.T_MERGE + 3.0, 0.002)
         f = np.array([self.f_of(x) if x >= self.T_START else 55.0 for x in ts])
         self.ts = ts
-        self.fs = f
         self.ph = np.cumsum(f / 60.0 * 2 * np.pi * 0.002)  # slowed-down visual orbital phase
-        amp = np.where(ts < self.T_MERGE, (f / 420) ** 0.9, np.exp(-(ts - self.T_MERGE) / 0.25))
-        self.h = amp * np.cos(np.cumsum(f / 18.0 * 2 * np.pi * 0.002))  # slowed-down strain for display
+        d = np.load(os.path.join(ROOT, "assets", "ligo", "gw150914.npz"))
+        sel = (d["t"] >= self.WIN[0]) & (d["t"] <= self.WIN[1])
+        self.rt, self.rh, self.rl = d["t"][sel], d["h"][sel], d["l"][sel]
+        m = max(np.abs(self.rh).max(), np.abs(self.rl).max())
+        self.rh, self.rl = self.rh / m, self.rl / m
+        tf = d["tf"][:, sel]
+        tf = np.log1p(tf / np.percentile(tf, 50))
+        self.tf = np.clip(tf / tf.max(), 0, 1) ** 2.6
+        self.tf_freqs = d["freqs"]
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.4, hue=(0.02, 0.03, 0.08))
-        cx, cy = 560.0, 540.0
+        cx, cy = 470.0, 560.0
         merged = t >= self.T_MERGE
         f = self.f_of(t)
-        sep = 130 * (55.0 / f) ** (2 / 3) if not merged else 0.0
+        sep = 120 * (55.0 / f) ** (2 / 3) if not merged else 0.0
         ph = float(np.interp(t, self.ts, self.ph))
-        # spacetime grid warped by ripples
         ripple_t = t - self.T_MERGE
-        for gy in np.arange(200, 900, 36):
-            xs = np.linspace(100, 1020, 120)
+        for gy in np.arange(240, 880, 36):
+            xs = np.linspace(80, 860, 110)
             d = np.hypot(xs - cx, gy - cy)
-            k = 0.06
-            wave = np.sin(d * k - (t * 9)) * np.exp(-d / 420) * (8 + 18 * (1 - min(1, sep / 130)))
+            wave = np.sin(d * 0.06 - (t * 9)) * np.exp(-d / 420) * (8 + 18 * (1 - min(1, sep / 120)))
             if merged:
                 wave += 30 * np.sin(d * 0.05 - ripple_t * 14) * np.exp(-((d - ripple_t * 420) / 90) ** 2)
-            pull = -2600 / (d + 60)
-            ys = gy + wave + pull * (gy - cy) / (d + 1) * 0.6
+            ys = gy + wave - 2600 / (d + 60) * (gy - cy) / (d + 1) * 0.6
             stroke_poly(ctx, np.stack([xs, ys], 1), BLUE, 1.2, 0.38)
-        # black holes
         if not merged:
-            for s in (0, 1):
-                ang = ph + s * math.pi
+            for s_ in (0, 1):
+                ang = ph + s_ * math.pi
                 x = cx + sep / 2 * math.cos(ang)
                 y = cy + sep / 2 * math.sin(ang) * 0.45
-                circle(ctx, x, y, 44, ORANGE, 0.12, width=14)
-                circle(ctx, x, y, 30, (0, 0, 0), 1.0, fill=True)
-                circle(ctx, x, y, 32, GOLD, 0.9, width=3)
+                circle(ctx, x, y, 40, ORANGE, 0.12, width=14)
+                circle(ctx, x, y, 27, (0, 0, 0), 1.0, fill=True)
+                circle(ctx, x, y, 29, GOLD, 0.9, width=3)
         else:
-            u = ripple_t
-            circle(ctx, cx, cy, 34, (0, 0, 0), 1.0, fill=True)
-            circle(ctx, cx, cy, 36, GOLD, 0.9, width=3)
+            circle(ctx, cx, cy, 32, (0, 0, 0), 1.0, fill=True)
+            circle(ctx, cx, cy, 34, GOLD, 0.9, width=3)
             for k in range(4):
-                r = (u - k * 0.18) * 520
+                r = (ripple_t - k * 0.18) * 520
                 if r > 0:
-                    circle(ctx, cx, cy, r, mix(WHITE, CYAN, k / 3), max(0, 0.7 - u * 0.4), width=3)
-        # waveform panel
-        px0, px1, wy = 1080.0, 1820.0, 360.0
-        span = 3.0
-        tt = np.linspace(t - span, t, 700)
-        hh = np.interp(tt, self.ts, self.h)
-        xs = np.linspace(px0, px1, len(tt))
-        stroke_poly(ctx, np.stack([xs, wy - 90 * hh], 1), CYAN, 2.0, 0.95, glow=0.8)
-        draw_text(ctx, "应变 h(t)", px0, wy - 130, size=18, font="sans", weight=500, color=CYAN, alpha=0.8, anchor="left")
-        # time-frequency panel
-        fy0, fy1 = 520.0, 800.0
-        set_rgba(ctx, (0.05, 0.08, 0.2), 0.8)
+                    circle(ctx, cx, cy, r, mix(WHITE, CYAN, k / 3), max(0, 0.7 - ripple_t * 0.4), width=3)
+        draw_text(ctx, "示意动画", cx, 860, size=28, font="sans", weight=400, color=WHITE, alpha=0.5)
+        # ---- real strain, revealed in slow motion
+        tr = self.real_t(t)
+        n = int(np.searchsorted(self.rt, tr))
+        px0, px1, wy = 980.0, 1820.0, 330.0
+        X = px0 + (self.rt - self.WIN[0]) / (self.WIN[1] - self.WIN[0]) * (px1 - px0)
+        if n > 1:
+            stroke_poly(ctx, np.stack([X[:n], wy - 95 * self.rl[:n]], 1), ORANGE, 1.8, 0.8)
+            stroke_poly(ctx, np.stack([X[:n], wy - 95 * self.rh[:n]], 1), CYAN, 2.2, 0.95, glow=0.6)
+            glow_dot(ctx, X[n - 1], wy - 95 * self.rh[n - 1], 4, WHITE, 1.0, 4)
+        draw_text(ctx, "汉福德 H1", px0, wy - 140, size=28, font="sans", weight=500, color=CYAN, anchor="left")
+        draw_text(ctx, "利文斯顿 L1", px0 + 200, wy - 140, size=28, font="sans", weight=500, color=ORANGE, anchor="left")
+        draw_text(ctx, "真实数据 · 已白化", px1, wy - 140, size=28, font="sans", weight=400, color=WHITE, alpha=0.7,
+                  anchor="right")
+        # ---- wavelet time-frequency map of the real data
+        fy0, fy1 = 520.0, 820.0
+        m = self.tf.copy()
+        m[:, n:] = 0
+        vis = apply_lut(m[::-1], LUT_FIRE)
+        paint_image(ctx, surface_from_array(vis), px0, fy0, px1 - px0, fy1 - fy0, 1.0, anchor="topleft")
+        set_rgba(ctx, WHITE, 0.25)
+        ctx.set_line_width(1)
         ctx.rectangle(px0, fy0, px1 - px0, fy1 - fy0)
-        ctx.fill()
-        ff = np.interp(tt, self.ts, self.fs)
-        vis = tt >= self.T_START
-        yy = fy1 - (np.log(ff) - np.log(40)) / (np.log(500) - np.log(40)) * (fy1 - fy0)
-        amp = np.interp(tt, self.ts, np.where(self.ts < self.T_MERGE, (self.fs / 420) ** 0.9, 0))
-        for i in range(0, len(tt) - 1, 3):
-            if not vis[i] or amp[i] <= 0.01:
-                continue
-            ctx.move_to(xs[i], yy[i])
-            ctx.line_to(xs[i + 3] if i + 3 < len(xs) else xs[-1], yy[i + 3] if i + 3 < len(yy) else yy[-1])
-            set_rgba(ctx, mix(ORANGE, WHITE, amp[i]), 0.9 * amp[i] + 0.1)
-            ctx.set_line_width(4 + 6 * amp[i])
-            ctx.stroke()
-        draw_text(ctx, "频率 ↑", px0, fy0 - 26, size=18, font="sans", weight=500, color=ORANGE, alpha=0.8, anchor="left")
-        draw_text(ctx, "“啁啾”", px1, fy0 - 26, size=20, font="sans", weight=500, color=WHITE, alpha=0.8, anchor="right")
-        vignette_title(ctx, lt, "引力波", "GRAVITATIONAL WAVES", "LIGO · GW150914", y=150)
+        ctx.stroke()
+        draw_text(ctx, "小波时频图：频率 35 → 250 Hz", px0, fy1 + 34, size=28, font="sans", weight=500, color=ORANGE,
+                  anchor="left")
+        vignette_title(ctx, lt, "引力波", "GW150914 · LIGO", None, y=150)
 
     def effects(self, t, lt):
         e = super().effects(t, lt)
@@ -453,14 +536,14 @@ class WiFi(Vignette):
         ctx.move_to(x0 - 40, base)
         ctx.line_to(x1 + 40, base)
         ctx.stroke()
-        draw_text(ctx, "频率 →", x1 + 40, base + 30, size=18, font="sans", weight=500, color=WHITE, alpha=0.6,
+        draw_text(ctx, "频率 →", x1 + 40, base + 30, size=28, font="sans", weight=500, color=WHITE, alpha=0.6,
                   anchor="right")
         a = smooth((lt - 1.1) / 0.5)
-        draw_text(ctx, "每一种颜色，都是一路独立的数据", 960, base - 420, size=24, font="sans", weight=400,
+        draw_text(ctx, "每一种颜色，都是一路独立的数据", 960, base - 420, size=32, font="sans", weight=400,
                   color=(0.85, 0.9, 1.0), alpha=0.85 * a)
-        draw_text(ctx, "峰值处，其余载波恰好为零 —— 正交", 960, base + 60, size=18, font="sans", weight=400,
+        draw_text(ctx, "峰值处，其余载波恰好为零 —— 正交", 960, base + 60, size=28, font="sans", weight=400,
                   color=GOLD, alpha=0.8 * smooth((lt - 1.7) / 0.5))
-        vignette_title(ctx, lt, "Wi-Fi · 5G", "OFDM", "正交频分复用", y=150)
+        vignette_title(ctx, lt, "Wi-Fi · 5G", "OFDM", "正交频分复用", y=150, layout="tr")
 
 
 # ---------------------------------------------------------------------- 6. quantum
@@ -507,15 +590,15 @@ class Quantum(Vignette):
                 ctx.move_to(cx + sx * wbar / 2, base + 22)
                 ctx.line_to(cx + sx * wbar / 2, base + 38)
             ctx.stroke()
-            draw_text(ctx, lab, cx, base + 72, size=24, font="sans", weight=500, color=col, alpha=a)
+            draw_text(ctx, lab, cx, base + 72, size=32, font="sans", weight=500, color=col, alpha=a)
         draw_math(ctx, r"$\Delta x \cdot \Delta p \geq \frac{\hbar}{2}$", 960, 330, size=48, color=WHITE,
                   alpha=smooth((lt - 0.5) / 0.5), glow=8)
-        draw_text(ctx, "量子计算：Shor 算法的核心，正是“量子傅里叶变换”", 960, 400, size=22, font="sans",
+        draw_text(ctx, "量子计算：Shor 算法的核心，正是“量子傅里叶变换”", 960, 400, size=30, font="sans",
                   weight=400, color=GOLD, alpha=0.85 * smooth((lt - 1.4) / 0.5))
         arrow(ctx, 890, 520, 1030, 520, GOLD, 0.8 * a, 2, 14)
         arrow(ctx, 1030, 545, 890, 545, GOLD, 0.8 * a, 2, 14)
         draw_math(ctx, r"$\mathcal{F}$", 960, 480, size=34, color=GOLD, alpha=a)
-        vignette_title(ctx, lt, "量子", "QUANTUM", "不确定性原理", y=150)
+        vignette_title(ctx, lt, "量子", "QUANTUM", "不确定性原理", layout="v")
 
 
 # ---------------------------------------------------------------------- 7. AI positional encoding
@@ -544,7 +627,7 @@ class AIPos(Vignette):
         ctx.set_line_width(1)
         ctx.rectangle(x0 - 4, y0 - 4, cw * d + 8, ch * npos + 8)
         ctx.stroke()
-        draw_text(ctx, "维度 → 频率由高到低", x0 + cw * d / 2, y0 - 30, size=18, font="sans", weight=500,
+        draw_text(ctx, "维度 → 频率由高到低", x0 + cw * d / 2, y0 - 30, size=28, font="sans", weight=500,
                   color=WHITE, alpha=0.7)
         # tokens
         toks = list("我们用波理解世界")
@@ -556,7 +639,7 @@ class AIPos(Vignette):
             rounded_rect(ctx, 430, y - 22, 56, 44, 8)
             set_rgba(ctx, GOLD if on else (0.3, 0.4, 0.7), (0.9 if on else 0.35) * a)
             ctx.fill()
-            draw_text(ctx, tok, 458, y, size=28, font="sans", weight=600, color=(0.05, 0.05, 0.1) if on else WHITE,
+            draw_text(ctx, tok, 458, y, size=34, font="sans", weight=600, color=(0.05, 0.05, 0.1) if on else WHITE,
                       alpha=a)
             ctx.move_to(495, y)
             ctx.line_to(x0 - 10, y)
@@ -616,11 +699,11 @@ class FFT(Vignette):
         # comparison
         a = smooth((lt - 0.6) / 0.4)
         bx = 1260.0
-        draw_text(ctx, "100 万个数据点", bx, 330, size=26, font="sans", weight=500, color=WHITE, alpha=a, anchor="left")
-        draw_text(ctx, "直接计算", bx, 420, size=22, font="sans", weight=400, color=(0.8, 0.85, 1.0), alpha=a,
+        draw_text(ctx, "100 万个数据点", bx, 330, size=34, font="sans", weight=500, color=WHITE, alpha=a, anchor="left")
+        draw_text(ctx, "直接计算", bx, 420, size=30, font="sans", weight=400, color=(0.8, 0.85, 1.0), alpha=a,
                   anchor="left")
         draw_math(ctx, r"$N^2 \approx 10^{12}$", bx + 330, 420, size=34, color=RED, alpha=a)
-        draw_text(ctx, "FFT", bx, 510, size=24, font="latin", weight=700, color=GOLD, alpha=a, anchor="left")
+        draw_text(ctx, "FFT", bx, 510, size=32, font="latin", weight=700, color=GOLD, alpha=a, anchor="left")
         draw_math(ctx, r"$N\log_2 N \approx 2\times10^{7}$", bx + 330, 510, size=34, color=GOLD, alpha=a)
         b = smooth((lt - 1.2) / 0.4)
         L1 = 520 * b
@@ -632,9 +715,9 @@ class FFT(Vignette):
         ctx.fill()
         draw_text(ctx, "快 50000 倍", bx, 700, size=40, font="sans", weight=700, color=GOLD,
                   alpha=smooth((lt - 1.7) / 0.4), anchor="left", glow=8, glow_alpha=0.4)
-        draw_text(ctx, "高斯 · 1805（手稿，1866 年才出版）", bx, 770, size=20, font="sans", weight=400,
+        draw_text(ctx, "高斯 · 1805（手稿，1866 年才出版）", bx, 770, size=28, font="sans", weight=400,
                   color=(0.85, 0.9, 1.0), alpha=0.8 * smooth((lt - 2.2) / 0.4), anchor="left")
-        vignette_title(ctx, lt, "FFT", "COOLEY–TUKEY · 1965", "快速傅里叶变换", y=150)
+        vignette_title(ctx, lt, "FFT", "COOLEY–TUKEY · 1965", "快速傅里叶变换", y=150, layout="tr")
 
 
 # ---------------------------------------------------------------------- Fourier optics: Webb's diffraction spikes
@@ -679,20 +762,35 @@ class Optics(Vignette):
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.3)
-        a = smooth(lt / 0.4)
+        if not hasattr(self, "hst"):
+            from ..data import image
+            xdf = image("hubble_deep_field", None, gray=False)[..., :3]
+            self.hst = xdf[578 - 60:578 + 60, 755 - 60:755 + 60]
+        # left column: Webb mirror (aperture) and Hubble's real star
+        a = smooth(lt / 0.35)
         vis = apply_lut(self.ap_vis * 0.85, LUT_GOLD)
-        paint_image(ctx, surface_from_array(vis), 520, 540, 440, 440, a)
-        draw_text(ctx, "镜面（孔径）", 520, 800, size=24, font="sans", weight=500, color=GOLD, alpha=a)
-        b = ease_out((lt - 0.5) / 0.5, 2)
+        paint_image(ctx, surface_from_array(vis), 430, 470, 340, 340, a)
+        draw_text(ctx, "韦布：18 块六边形镜面", 430, 680, size=30, font="sans", weight=500, color=GOLD, alpha=a)
+        b = ease_out((lt - 0.4) / 0.4, 2)
         if b > 0:
-            arrow(ctx, 790, 540, lerp(790, 1010, b), 540, WHITE, 0.8 * b, 2.5, 16)
-            draw_math(ctx, r"$|\mathcal{F}|^2$", 900, 495, size=34, color=WHITE, alpha=b)
-        r = smooth((lt - 0.9) / 0.7)
+            arrow(ctx, 640, 470, lerp(640, 820, b), 470, WHITE, 0.8 * b, 2.5, 16)
+            draw_math(ctx, r"$|\mathcal{F}|^2$", 730, 420, size=38, color=WHITE, alpha=b)
+        r = smooth((lt - 0.7) / 0.6)
         if r > 0:
             vis = apply_lut(self.psf * r, LUT_ICE)
-            paint_image(ctx, surface_from_array(vis), 1380, 540, 560, 560, 1.0)
-            draw_text(ctx, "星点的衍射图", 1380, 860, size=24, font="sans", weight=500, color=CYAN, alpha=r)
-        vignette_title(ctx, lt, "傅里叶光学", "FOURIER OPTICS · JWST", "透镜以光速完成傅里叶变换")
+            paint_image(ctx, surface_from_array(vis), 1080, 470, 460, 460, 1.0)
+            draw_text(ctx, "算出来的星芒：6 + 2 道", 1080, 730, size=30, font="sans", weight=500, color=CYAN, alpha=r)
+        c = smooth((lt - 1.4) / 0.5)
+        if c > 0:
+            paint_image(ctx, surface_from_array(self.hst.astype(np.float32) / 255.0), 1620, 470, 340, 340, c,
+                        filt=cairo.FILTER_BEST)
+            set_rgba(ctx, WHITE, 0.3 * c)
+            ctx.set_line_width(1.2)
+            ctx.rectangle(1450, 300, 340, 340)
+            ctx.stroke()
+            draw_text(ctx, "哈勃真实照片：十字支架", 1620, 680, size=30, font="sans", weight=500, color=WHITE, alpha=c)
+            draw_text(ctx, "→ 4 道星芒", 1620, 722, size=30, font="sans", weight=500, color=WHITE, alpha=c)
+        vignette_title(ctx, lt, "傅里叶光学", "FOURIER OPTICS", "透镜以光速完成傅里叶变换", y=130)
 
 
 # ---------------------------------------------------------------------- spherical harmonics
@@ -747,8 +845,8 @@ class SphHarm(Vignette):
                         k = min(P.shape[0], i + 3)
                         col = CYAN if s_line[i] >= 0 else MAGENTA
                         line3(ctx, cam, col_line[i:k], col, 1.1, 0.8 * a)
-            draw_text(ctx, f"l = {l}", 250, y, size=22, font="latin", weight=500, color=WHITE, alpha=0.7)
-        vignette_title(ctx, lt, "球谐函数", "SPHERICAL HARMONICS", "球面上的傅里叶级数", x=110, y=110)
+            draw_text(ctx, f"l = {l}", 250, y, size=30, font="latin", weight=500, color=WHITE, alpha=0.7)
+        vignette_title(ctx, lt, "球谐函数", "SPHERICAL HARMONICS", "球面上的傅里叶级数", y=110, layout="tr")
 
 
 # ---------------------------------------------------------------------- tides
@@ -772,7 +870,7 @@ class Tides(Vignette):
             col = hsv(0.5 + 0.08 * i, 0.7, 1.0)
             line3(ctx, cam, np.stack([X, y * 0.8, np.full_like(X, z)], 1), col, 1.4, 0.7 * (1 - 0.8 * collapse))
             px, py, _ = cam.project(np.array([[6.3, 0, z]]))
-            draw_text(ctx, f"{nm}  {per:.2f} h", px[0] + 10, py[0], size=18, font="mono", weight=500, color=col,
+            draw_text(ctx, f"{nm}  {per:.2f} h", px[0] + 10, py[0], size=28, font="mono", weight=500, color=col,
                       alpha=0.9 * (1 - collapse), anchor="left")
         line3(ctx, cam, np.stack([X, total * 0.8, np.zeros_like(X)], 1), WHITE, 2.4, 0.4 + 0.6 * collapse)
         a = smooth((lt - 1.9) / 0.4)
@@ -788,10 +886,10 @@ class Tides(Vignette):
             for d, lab in marks:
                 x = (d / self.DAYS - 0.5) * 12.0
                 px, py, _ = cam.project(np.array([[x, 2.4, 0]]))
-                draw_text(ctx, lab, px[0], py[0], size=22, font="sans", weight=600, color=GOLD, alpha=a)
-            draw_text(ctx, "30 天", 1700, 760, size=18, font="sans", weight=400, color=WHITE, alpha=0.6 * a,
+                draw_text(ctx, lab, px[0], py[0], size=30, font="sans", weight=600, color=GOLD, alpha=a)
+            draw_text(ctx, "30 天", 1700, 760, size=28, font="sans", weight=400, color=WHITE, alpha=0.6 * a,
                       anchor="right")
-        vignette_title(ctx, lt, "潮汐", "TIDES · KELVIN 1872", "开尔文潮汐预测机：用滑轮把正弦波加起来")
+        vignette_title(ctx, lt, "潮汐", "TIDES · KELVIN 1872", "开尔文潮汐预测机：用滑轮把正弦波加起来", y=110, layout="tc")
 
 
 def beyond_scenes():

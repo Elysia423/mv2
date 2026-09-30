@@ -48,9 +48,9 @@ class Euler3D(Scene):
                 line3(ctx, cam, np.array([[x[k], s[k], c[k]], [x[k], fl, c[k]]]), CYAN, 1.0, 0.12 * side)
                 line3(ctx, cam, np.array([[x[k], s[k], c[k]], [x[k], s[k], wl]]), MAGENTA, 1.0, 0.12 * side)
             lx, ly, _ = cam.project(np.array([[x[-1] + 0.3, fl, c[-1]], [x[-1] + 0.3, s[-1], wl]]))
-            draw_text(ctx, "cos ωt  实部", lx[0] + 10, ly[0], size=22, font="sans", weight=500, color=CYAN,
+            draw_text(ctx, "cos ωt  实部", lx[0] + 10, ly[0], size=30, font="sans", weight=500, color=CYAN,
                       alpha=side, anchor="left")
-            draw_text(ctx, "sin ωt  虚部", lx[1] + 10, ly[1], size=22, font="sans", weight=500, color=MAGENTA,
+            draw_text(ctx, "sin ωt  虚部", lx[1] + 10, ly[1], size=30, font="sans", weight=500, color=MAGENTA,
                       alpha=side, anchor="left")
         # the helix itself
         line3_depth(ctx, cam, np.stack([x, s * R, c * R], 1), GOLD, 3.0, 1.0, far_alpha=0.35)
@@ -66,7 +66,7 @@ class Euler3D(Scene):
         line3(ctx, cam, np.stack([np.full_like(ang, x[-1]), np.sin(ang), np.cos(ang)], 1), CYAN, 1.2, 0.35)
         draw_math(ctx, r"$e^{i\omega t}=\cos\omega t+i\,\sin\omega t$", W / 2, 150, size=46, color=WHITE,
                   alpha=smooth((lt - 0.3) / 0.5), glow=8)
-        draw_text(ctx, "欧拉公式 · EULER", W / 2, 215, size=18, font="sans", weight=500, color=GOLD,
+        draw_text(ctx, "欧拉公式 · EULER", W / 2, 215, size=28, font="sans", weight=500, color=GOLD,
                   alpha=0.8 * smooth((lt - 0.6) / 0.5), tracking=0.2)
 
 
@@ -201,9 +201,9 @@ class Circles(Scene):
             chg = max([math.exp(-(t - tk) / 0.25) for tk, _ in S.C1_COUNT_KEYS if t >= tk] + [0])
             draw_text(ctx, str(n), 1650, 170, size=110 + 14 * chg, font="latin", weight=200, color=WHITE,
                       alpha=a_cnt, anchor="right", glow=6, glow_alpha=0.5 * chg)
-            draw_text(ctx, "个圆", 1668, 150, size=26, font="sans", weight=500, color=GOLD, alpha=a_cnt, anchor="left")
-            draw_text(ctx, "CIRCLES", 1668, 186, size=14, font="latin", weight=500, color=(0.7, 0.8, 1.0),
-                      alpha=a_cnt * 0.7, anchor="left", tracking=0.3)
+            draw_text(ctx, "个圆", 1668, 150, size=34, font="sans", weight=500, color=GOLD, alpha=a_cnt, anchor="left")
+            draw_text(ctx, "CIRCLES", 1668, 186, size=22, font="latin", weight=500, color=(0.7, 0.8, 1.0),
+                      alpha=a_cnt * 0.7, anchor="left", tracking=0.18)
         # shape label
         for (a, b, zh, en, cc) in [(22.2, 23.6, "正弦波", "SINE", GOLD), (27.0, 30.0, "方波", "SQUARE", GOLD),
                                    (36.2, 38.1, "锯齿波", "SAWTOOTH", (1.0, 0.85, 0.4)),
@@ -212,8 +212,8 @@ class Circles(Scene):
             if al > 0:
                 draw_text(ctx, zh, self.X0 + 10, 250, size=40, font="serif", weight=700, color=cc, alpha=al,
                           anchor="left", tracking=0.2, glow=8, glow_alpha=0.4)
-                draw_text(ctx, en, self.X0 + 12, 300, size=15, font="latin", weight=500, color=WHITE,
-                          alpha=al * 0.6, anchor="left", tracking=0.4)
+                draw_text(ctx, en, self.X0 + 12, 300, size=24, font="latin", weight=500, color=WHITE,
+                          alpha=al * 0.6, anchor="left", tracking=0.18)
 
     def gibbs(self, ctx, t):
         """Magnified view of the overshoot next to a jump."""
@@ -247,9 +247,9 @@ class Circles(Scene):
         ctx.move_to(X[i] + 16, Y[i])
         ctx.line_to(X[i] + 16, y1)
         ctx.stroke()
-        draw_text(ctx, "≈ 9% 过冲", X[i] + 28, (Y[i] + y1) / 2 + 30, size=24, font="sans", weight=600, color=(1.0, 0.5, 0.5),
+        draw_text(ctx, "≈ 9% 过冲", X[i] + 28, (Y[i] + y1) / 2 + 30, size=32, font="sans", weight=600, color=(1.0, 0.5, 0.5),
                   alpha=a, anchor="left")
-        draw_text(ctx, "吉布斯现象 · GIBBS", x0 + 14, y0 + 22, size=16, font="sans", weight=500, color=WHITE,
+        draw_text(ctx, "吉布斯现象 · GIBBS", x0 + 14, y0 + 22, size=28, font="sans", weight=500, color=WHITE,
                   alpha=0.75 * a, anchor="left", tracking=0.08)
 
     def effects(self, t, lt):
@@ -305,9 +305,9 @@ class TimeFreq3D(Scene):
                 xb = -4.6
                 line3(ctx, cam, np.array([[xb, 0, z], [xb, amp * spec, z]]), col, 9.0, 0.95 * spec)
                 px, py, _ = cam.project(np.array([[xb, amp * spec + 0.25, z], [xb, -0.35, z]]))
-                draw_text(ctx, f"{amp:.2f}", px[0], py[0], size=20, font="mono", weight=400, color=WHITE,
+                draw_text(ctx, f"{amp:.2f}", px[0], py[0], size=28, font="mono", weight=400, color=WHITE,
                           alpha=0.85 * spec)
-                draw_text(ctx, f"{k}f", px[1], py[1], size=24, font="latin", weight=600, color=col, alpha=spec)
+                draw_text(ctx, f"{k}f", px[1], py[1], size=32, font="latin", weight=600, color=col, alpha=spec)
         # the sum (the square wave) in front
         line3(ctx, cam, np.stack([x, total, np.full_like(x, self.ZSUM)], 1), GOLD, 3.2, 1.0 * (1 - 0.7 * spec))
         # axes
@@ -315,11 +315,11 @@ class TimeFreq3D(Scene):
         axis3(ctx, cam, (-4.6, 0, self.ZSUM), (-4.6, 0, len(self.KS) * self.DZ + 0.4), WHITE, 0.35 * spread, 1.2,
               head=10)
         tx, ty, _ = cam.project(np.array([[4.6, -0.5, self.ZSUM], [-4.6, -0.9, len(self.KS) * self.DZ]]))
-        draw_text(ctx, "时间 t", tx[0], ty[0], size=22, font="sans", weight=500, color=WHITE, alpha=0.8 * (1 - spec))
-        draw_text(ctx, "频率 f", tx[1], ty[1], size=22, font="sans", weight=500, color=WHITE, alpha=0.8 * spread)
+        draw_text(ctx, "时间 t", tx[0], ty[0], size=30, font="sans", weight=500, color=WHITE, alpha=0.8 * (1 - spec))
+        draw_text(ctx, "频率 f", tx[1], ty[1], size=30, font="sans", weight=500, color=WHITE, alpha=0.8 * spread)
         a1 = window(lt, 0.0, 3.6, 0.3, 0.4)
         a2 = smooth((lt - 3.9) / 0.5)
-        draw_text(ctx, "时域  TIME DOMAIN", W / 2, 130, size=30, font="sans", weight=600, color=GOLD, alpha=a1,
+        draw_text(ctx, "时域  TIME DOMAIN", W / 2, 130, size=36, font="sans", weight=600, color=GOLD, alpha=a1,
                   tracking=0.15)
-        draw_text(ctx, "频域  FREQUENCY DOMAIN", W / 2, 130, size=30, font="sans", weight=600, color=CYAN, alpha=a2,
+        draw_text(ctx, "频域  FREQUENCY DOMAIN", W / 2, 130, size=36, font="sans", weight=600, color=CYAN, alpha=a2,
                   tracking=0.15)

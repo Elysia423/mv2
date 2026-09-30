@@ -40,24 +40,25 @@ class Captions:
                 continue
             lt = t - t0
             a_out = 1 - smooth((t - t1) / 0.45)
-            y = 948
+            y = 935
             # soft dark band for legibility
-            band = min(1.0, lt / 0.4) * a_out
+            band = min(1.0, lt / 0.3) * a_out
             if band > 0:
                 import cairo
-                g = cairo.LinearGradient(0, y - 90, 0, H)
+                g = cairo.LinearGradient(0, y - 100, 0, H)
                 g.add_color_stop_rgba(0, 0, 0, 0, 0)
-                g.add_color_stop_rgba(0.5, 0, 0, 0, 0.35 * band)
-                g.add_color_stop_rgba(1, 0, 0, 0, 0.45 * band)
+                g.add_color_stop_rgba(0.45, 0, 0, 0, 0.45 * band)
+                g.add_color_stop_rgba(1, 0, 0, 0, 0.6 * band)
                 ctx.set_source(g)
-                ctx.rectangle(0, y - 90, W, H - y + 90)
+                ctx.rectangle(0, y - 100, W, H - y + 100)
                 ctx.fill()
-            draw_text_chars(ctx, zh, W / 2, y, lt, size=42, font="sans", weight=500, color=WHITE, alpha=0.96 * a_out,
-                            tracking=0.08, stagger=min(0.045, 0.9 / max(1, len(zh))), dur=0.45, rise=14)
+            # the whole line appears within ~0.35 s so reading time is not eaten by the animation
+            draw_text_chars(ctx, zh, W / 2, y, lt, size=48, font="sans", weight=500, color=WHITE, alpha=0.97 * a_out,
+                            tracking=0.06, stagger=min(0.02, 0.25 / max(1, len(zh))), dur=0.3, rise=10)
             if en:
-                a = smooth((lt - 0.35) / 0.6) * a_out * 0.62
-                draw_text(ctx, en.upper(), W / 2, y + 50, size=17, font="latin", weight=400, color=(0.8, 0.9, 1.0),
-                          alpha=a, tracking=0.22)
+                a = smooth((lt - 0.2) / 0.4) * a_out * 0.78
+                draw_text(ctx, en, W / 2, y + 60, size=34, font="latin", weight=400, color=(0.82, 0.9, 1.0),
+                          alpha=a, tracking=0.02)
 
 
 class ChapterTag:
@@ -85,7 +86,7 @@ class ChapterTag:
             ctx.move_to(x + 82, y)
             ctx.line_to(x + 82 + L, y)
             ctx.stroke()
-            draw_text(ctx, zh, x + 82 + L + 18, y - 11, size=26, font="serif", weight=600, color=WHITE,
+            draw_text(ctx, zh, x + 82 + L + 18, y - 11, size=34, font="serif", weight=600, color=WHITE,
                       alpha=a * (0.55 + 0.4 * emph), anchor="left", tracking=0.18)
-            draw_text(ctx, en, x + 82 + L + 20, y + 20, size=13, font="latin", weight=500,
-                      color=(0.75, 0.85, 1.0), alpha=a * (0.35 + 0.35 * emph), anchor="left", tracking=0.35)
+            draw_text(ctx, en, x + 82 + L + 20, y + 20, size=22, font="latin", weight=500,
+                      color=(0.75, 0.85, 1.0), alpha=a * (0.35 + 0.35 * emph), anchor="left", tracking=0.18)

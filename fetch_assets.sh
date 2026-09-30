@@ -14,4 +14,10 @@ get "jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf" JetBrainsMono.ttf
 get "cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf" Cormorant.ttf
 get "notoemoji/NotoEmoji%5Bwght%5D.ttf" NotoEmoji.ttf
 [ -s assets/brain.npy ] || python3 -c "import numpy as np, skimage.data as d; np.save('assets/brain.npy', d.brain())"
+mkdir -p assets/ligo
+L=https://raw.githubusercontent.com/losc-tutorial/LOSC_Event_tutorial/master
+for f in H-H1_LOSC_4_V2-1126259446-32.hdf5 L-L1_LOSC_4_V2-1126259446-32.hdf5; do
+  [ -s "assets/ligo/$f" ] || curl -sSfL -o "assets/ligo/$f" "$L/$f"
+done
+[ -s assets/ligo/gw150914.npz ] || python3 -m film.prep_ligo
 echo "assets ready"

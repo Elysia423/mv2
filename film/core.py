@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 W, H = 1920, 1080
 FPS = 30
 BPM = 120
+RS = 1.0  # render scale (1 = 1080p, 2 = 4K); text, maths and glow are rasterised at this density
 BEAT = 60.0 / BPM
 BAR = 4 * BEAT
 
@@ -126,8 +127,14 @@ def pulse(t, t0, decay=0.25):
 
 
 # ----------------------------------------------------------------- canvas
+def set_render_scale(scale):
+    global RS
+    RS = float(scale)
+
+
 class Canvas:
     def __init__(self, scale=1.0):
+        set_render_scale(scale)
         self.scale = scale
         self.w = int(round(W * scale))
         self.h = int(round(H * scale))
@@ -283,10 +290,10 @@ def draw_text(ctx, s, x, y, size=40, font="sans", weight=400, color=WHITE, alpha
     'left', 'right' (vertical middle). y is the vertical middle of the cap height box."""
     if alpha <= 0.002 or not s:
         return
-    L = text_layer(s, font, int(round(size)), weight, tuple(color), tracking, glow)
+    L = text_layer(s, font, int(round(size * RS)), weight, tuple(color), tracking, int(round(glow * RS)))
     ctx.save()
     ctx.translate(x, y)
-    ctx.scale(scale, scale)
+    ctx.scale(scale / RS, scale / RS)
     mid = L.mid
     if anchor == "center":
         ox = L.ox + L.tw / 2
@@ -316,16 +323,16 @@ def draw_text(ctx, s, x, y, size=40, font="sans", weight=400, color=WHITE, alpha
 
 
 def text_width(s, size=40, font="sans", weight=400, tracking=0.0):
-    L = text_layer(s, font, int(round(size)), weight, WHITE, tracking, 0)
-    return L.tw
+    L = text_layer(s, font, int(round(size * RS)), weight, WHITE, tracking, 0)
+    return L.tw / RS
 
 
 def draw_text_chars(ctx, s, x, y, t, size=40, font="sans", weight=400, color=WHITE, alpha=1.0,
                     anchor="center", tracking=0.0, stagger=0.05, dur=0.5, rise=18, glow=0, glow_alpha=0.8,
                     t_out=None, out_dur=0.4):
     """Per-character animated reveal. t: time since the reveal started."""
-    f = get_font(font, int(round(size)), weight)
-    advs = [f.getlength(ch) for ch in s]
+    f = get_font(font, int(round(size * RS)), weight)
+    advs = [f.getlength(ch) / RS for ch in s]
     total = sum(advs) + tracking * size * (len(s) - 1)
     if anchor == "center":
         cx = x - total / 2
@@ -372,10 +379,10 @@ def math_layer(tex, size=40, color=WHITE, glow=0):
 
 
 def draw_math(ctx, tex, x, y, size=40, color=WHITE, alpha=1.0, glow=0, glow_alpha=0.9, scale=1.0, reveal=None):
-    surf, w, h, g = math_layer(tex, size, tuple(color), glow)
+    surf, w, h, g = math_layer(tex, int(round(size * RS)), tuple(color), int(round(glow * RS)))
     ctx.save()
     ctx.translate(x, y)
-    ctx.scale(scale, scale)
+    ctx.scale(scale / RS, scale / RS)
     ctx.translate(-w / 2, -h / 2)
     if reveal is not None and reveal < 1:
         soft = 0.15 * w
@@ -576,7 +583,7 @@ def bloom(img, strength=0.9, threshold=0.12):
     acc = np.zeros_like(img)
     cur = src
     weights = [0.4, 0.34, 0.28, 0.24]
-    sig = [2.0, 3.0, 4.0, 6.0]
+    sig = [2.0 * RS, 3.0 * RS, 4.0 * RS, 6.0 * RS]
     for k in range(4):
         ch, cw = max(1, cur.shape[0] // 2), max(1, cur.shape[1] // 2)
         cur = cv2.resize(cur, (cw, ch), interpolation=cv2.INTER_AREA)

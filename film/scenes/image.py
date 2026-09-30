@@ -124,16 +124,16 @@ class ImageBase(Scene):
         self.draw_rgb(ctx, tile, tx, ty, ts, ts, a)
         self.frame(ctx, tx, ty, ts, ts, a, CYAN)
         draw_text(ctx, "+", 640, 440, size=90, font="latin", weight=200, color=WHITE, alpha=0.8 * a)
-        draw_text(ctx, "当前叠加的波", tx, ty + 190, size=22, font="sans", weight=500, color=CYAN, alpha=0.9 * a)
-        draw_text(ctx, "THE WAVE BEING ADDED", tx, ty + 222, size=12, font="latin", weight=500, color=WHITE,
-                  alpha=0.5 * a, tracking=0.3)
+        draw_text(ctx, "当前叠加的波", tx, ty + 190, size=30, font="sans", weight=500, color=CYAN, alpha=0.9 * a)
+        draw_text(ctx, "THE WAVE BEING ADDED", tx, ty + 222, size=22, font="latin", weight=500, color=WHITE,
+                  alpha=0.5 * a, tracking=0.18)
         # counters
         pct = K / self.ntot * 100
         draw_text(ctx, f"{K:,}", x - w / 2, y - h / 2 - 60, size=52, font="latin", weight=300, color=WHITE, alpha=a,
                   anchor="left")
-        draw_text(ctx, "个波", x - w / 2 + 14 + text_width(f"{K:,}", 52, "latin", 300), y - h / 2 - 56, size=22, font="sans",
+        draw_text(ctx, "个波", x - w / 2 + 14 + text_width(f"{K:,}", 52, "latin", 300), y - h / 2 - 56, size=30, font="sans",
                   weight=500, color=GOLD, alpha=a, anchor="left")
-        draw_text(ctx, f"{pct:.3f} %" if pct < 1 else f"{pct:.1f} %", x + w / 2, y - h / 2 - 58, size=30, font="mono", weight=300,
+        draw_text(ctx, f"{pct:.3f} %" if pct < 1 else f"{pct:.1f} %", x + w / 2, y - h / 2 - 58, size=36, font="mono", weight=300,
                   color=GOLD if S.T_IMGBUILD + 4.1 < t < S.T_IMGBUILD + 6.1 else WHITE, alpha=a, anchor="right")
 
     def part_filter(self, ctx, t, a):
@@ -172,11 +172,11 @@ class ImageBase(Scene):
         set_rgba(ctx, GOLD, 0.9 * a)
         ctx.set_line_width(2)
         ctx.stroke()
-        draw_text(ctx, "图像", x, y - h / 2 - 40, size=24, font="sans", weight=500, color=WHITE, alpha=0.9 * a)
-        draw_text(ctx, "频谱", sx, sy - sh / 2 - 40, size=24, font="sans", weight=500, color=CYAN, alpha=0.9 * a)
+        draw_text(ctx, "图像", x, y - h / 2 - 40, size=32, font="sans", weight=500, color=WHITE, alpha=0.9 * a)
+        draw_text(ctx, "频谱", sx, sy - sh / 2 - 40, size=32, font="sans", weight=500, color=CYAN, alpha=0.9 * a)
         lab = "低通：只留低频" if lp else "高通：只留高频"
-        draw_text(ctx, lab, sx, sy + sh / 2 + 44, size=22, font="sans", weight=500, color=GOLD, alpha=0.9 * a)
-        draw_text(ctx, "中心 = 低频，边缘 = 高频", sx, sy + sh / 2 + 80, size=16, font="sans", weight=400,
+        draw_text(ctx, lab, sx, sy + sh / 2 + 44, size=30, font="sans", weight=500, color=GOLD, alpha=0.9 * a)
+        draw_text(ctx, "中心 = 低频，边缘 = 高频", sx, sy + sh / 2 + 80, size=28, font="sans", weight=400,
                   color=WHITE, alpha=0.55 * a)
 
     def part_jpeg(self, ctx, t, a):
@@ -195,7 +195,7 @@ class ImageBase(Scene):
             cy = gy + (i - 3.5) * (cell + 4)
             s = cell * (0.6 + 0.4 * pop)
             self.draw_rgb(ctx, tile, cx, cy, s, s, a * pop, nearest=False)
-        draw_text(ctx, "64 种波纹", gx, gy + 4.4 * (cell + 4) + 20, size=24, font="sans", weight=500, color=CYAN,
+        draw_text(ctx, "64 种波纹", gx, gy + 4.4 * (cell + 4) + 20, size=32, font="sans", weight=500, color=CYAN,
                   alpha=a * smooth((t - t0 - 0.8) / 0.5))
         # blockwise reconstruction with the first n zigzag coefficients
         ncoef = 1 + int(round(ease_out((t - t0 - 2.2) / 2.4, 2) * 9))
@@ -207,7 +207,7 @@ class ImageBase(Scene):
         x, y, w, h = 1310.0, 470.0, 750.0, 750.0 * rec.shape[0] / rec.shape[1]
         self.draw_rgb(ctx, np.clip(rec, 0, 1), x, y, w, h, a, nearest=ncoef < 3)
         self.frame(ctx, x, y, w, h, a)
-        draw_text(ctx, f"每个 8×8 方块：{ncoef} / 64 种波纹", x, y + h / 2 + 44, size=22, font="sans", weight=500,
+        draw_text(ctx, f"每个 8×8 方块：{ncoef} / 64 种波纹", x, y + h / 2 + 44, size=30, font="sans", weight=500,
                   color=GOLD, alpha=a * smooth((t - t0 - 2.0) / 0.4))
         draw_text(ctx, "JPEG", x - w / 2, y - h / 2 - 44, size=34, font="latin", weight=700, color=WHITE, alpha=a,
                   anchor="left", tracking=0.2)
@@ -249,9 +249,9 @@ class Waves3D(ImageBase):
                           width=1.0)
         a = 1 - smooth((lt - 1.5) / 0.4)
         for i, x in enumerate([420, 960, 1500]):
-            draw_text(ctx, ["低频 · 横向", "中频 · 斜向", "高频 · 斜向"][i], x, 820, size=22, font="sans", weight=500,
+            draw_text(ctx, ["低频 · 横向", "中频 · 斜向", "高频 · 斜向"][i], x, 820, size=30, font="sans", weight=500,
                       color=[CYAN, VIOLET, MAGENTA][i], alpha=a)
-        draw_text(ctx, "叠加 = 一张“图像”", W / 2, 150, size=30, font="sans", weight=600, color=GOLD,
+        draw_text(ctx, "叠加 = 一张“图像”", W / 2, 150, size=36, font="sans", weight=600, color=GOLD,
                   alpha=smooth((lt - 2.4) / 0.5), tracking=0.1)
 
 
@@ -296,8 +296,8 @@ class Spectrum3D(ImageBase):
         self.frame(ctx, 1650, 230, 300, 200, 1.0)
         a = smooth((lt - 0.8) / 0.5)
         px, py, _ = cam.project(np.array([[0, 3.3, 0], [3.6, 0.3, 0]]))
-        draw_text(ctx, "低频（中心）", px[0], py[0] - 20, size=22, font="sans", weight=500, color=GOLD, alpha=a)
-        draw_text(ctx, "高频", px[1] + 10, py[1], size=20, font="sans", weight=500, color=CYAN, alpha=a, anchor="left")
+        draw_text(ctx, "低频（中心）", px[0], py[0] - 20, size=30, font="sans", weight=500, color=GOLD, alpha=a)
+        draw_text(ctx, "高频", px[1] + 10, py[1], size=28, font="sans", weight=500, color=CYAN, alpha=a, anchor="left")
 
 
 class Filter(ImageBase):
@@ -309,7 +309,7 @@ class Filter(ImageBase):
 
 
 class JPEG(ImageBase):
-    start, end = S.T_JPEG, S.T_BEYOND - 0.2
+    start, end = S.T_JPEG, S.T_BEYOND
 
     def draw(self, cv, t, lt):
         background(cv.ctx, t, dust=0.5)

@@ -73,10 +73,10 @@ class Chord(Scene):
         y_top = 270.0
         tot = sum(e * c for e, c in zip(env, comps))
         stroke_poly(ctx, np.stack([xs, y_top - 42 * tot], 1), WHITE, 2.4, 0.95, glow=1.0)
-        draw_text(ctx, "混合的声音", self.X0 - 30, y_top - 8, size=24, font="sans", weight=500, color=WHITE,
+        draw_text(ctx, "混合的声音", self.X0 - 30, y_top - 8, size=32, font="sans", weight=500, color=WHITE,
                   alpha=0.8 * smooth(lt / 1.0), anchor="right")
-        draw_text(ctx, "MIXTURE", self.X0 - 30, y_top + 22, size=12, font="latin", weight=500, color=WHITE,
-                  alpha=0.5 * smooth(lt / 1.0), anchor="right", tracking=0.3)
+        draw_text(ctx, "MIXTURE", self.X0 - 30, y_top + 22, size=22, font="latin", weight=500, color=WHITE,
+                  alpha=0.5 * smooth(lt / 1.0), anchor="right", tracking=0.18)
         # split into components
         lanes = [430.0, 540.0, 650.0]
         if t > self.start + 2.4:
@@ -86,9 +86,9 @@ class Chord(Scene):
                 a = smooth((t - self.start - 2.4) / 0.4)
                 stroke_poly(ctx, np.stack([xs, y - 42 * comps[i]], 1), NOTE_COLS[i], 2.2, 0.9 * a, glow=0.8)
                 nm, f = S.SOUND_CHORD[i]
-                draw_text(ctx, f"{nm}", self.X0 - 30, y - 8, size=26, font="latin", weight=500, color=NOTE_COLS[i],
+                draw_text(ctx, f"{nm}", self.X0 - 30, y - 8, size=34, font="latin", weight=500, color=NOTE_COLS[i],
                           alpha=a * spi, anchor="right")
-                draw_text(ctx, f"{f:.0f} Hz", self.X0 - 30, y + 22, size=14, font="mono", weight=400, color=WHITE,
+                draw_text(ctx, f"{f:.0f} Hz", self.X0 - 30, y + 22, size=22, font="mono", weight=400, color=WHITE,
                           alpha=0.6 * a * spi, anchor="right")
         # keyboard + beams
         ka = smooth((t - self.start - 3.4) / 0.5)
@@ -165,15 +165,15 @@ class Ear(Scene):
                 ctx.set_line_width(1.5)
                 ctx.stroke()
         a = smooth((lt - 0.6) / 0.6)
-        draw_text(ctx, "低音", self.CX + 5, self.CY + 5, size=22, font="sans", weight=500, color=(1, 0.5, 0.4),
+        draw_text(ctx, "低音", self.CX + 5, self.CY + 5, size=30, font="sans", weight=500, color=(1, 0.5, 0.4),
                   alpha=0.9 * a)
-        draw_text(ctx, "LOW", self.CX + 5, self.CY + 32, size=12, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
-                  tracking=0.3)
+        draw_text(ctx, "LOW", self.CX + 5, self.CY + 32, size=22, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
+                  tracking=0.18)
         ex, ey = self.px[-1], self.py[-1]
-        draw_text(ctx, "高音", ex + 40, ey - 10, size=22, font="sans", weight=500, color=(0.7, 0.5, 1.0),
+        draw_text(ctx, "高音", ex + 40, ey - 10, size=30, font="sans", weight=500, color=(0.7, 0.5, 1.0),
                   alpha=0.9 * a, anchor="left")
-        draw_text(ctx, "HIGH", ex + 40, ey + 18, size=12, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
-                  anchor="left", tracking=0.3)
+        draw_text(ctx, "HIGH", ex + 40, ey + 18, size=22, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
+                  anchor="left", tracking=0.18)
         # side panel: live spectrum bars
         xs0, xs1, yb = 1380.0, 1780.0, 700.0
         if a > 0:
@@ -185,13 +185,13 @@ class Ear(Scene):
                 set_rgba(ctx, col, 0.85 * a)
                 ctx.rectangle(xs0 + j * bw, yb - 180 * v, bw * 0.7, 180 * v)
                 ctx.fill()
-            draw_text(ctx, "频谱 · 实时", xs0, yb + 30, size=18, font="sans", weight=500, color=WHITE, alpha=0.7 * a,
+            draw_text(ctx, "频谱 · 实时", xs0, yb + 30, size=28, font="sans", weight=500, color=WHITE, alpha=0.7 * a,
                       anchor="left")
         # small 'ear' label
         draw_text(ctx, "耳蜗", 240, 300, size=64, font="serif", weight=700, color=WHITE, alpha=0.9 * a, anchor="left",
                   tracking=0.2, glow=8, glow_alpha=0.3)
-        draw_text(ctx, "COCHLEA", 244, 360, size=16, font="latin", weight=500, color=GOLD, alpha=0.7 * a,
-                  anchor="left", tracking=0.5)
+        draw_text(ctx, "COCHLEA", 244, 360, size=24, font="latin", weight=500, color=GOLD, alpha=0.7 * a,
+                  anchor="left", tracking=0.18)
 
 
 class Winding(Scene):
@@ -239,8 +239,8 @@ class Winding(Scene):
         ctx.set_line_width(2.5)
         ctx.stroke()
         glow_dot(ctx, mx, my, 8, RED, 1.0, 5)
-        draw_text(ctx, f"缠绕频率  {f:5.1f} Hz", cx, cy + 370, size=26, font="sans", weight=500, color=WHITE)
-        draw_text(ctx, "重心 ×4", mx + 18, my - 18, size=18, font="sans", weight=500, color=RED, anchor="left")
+        draw_text(ctx, f"缠绕频率  {f:5.1f} Hz", cx, cy + 370, size=34, font="sans", weight=500, color=WHITE)
+        draw_text(ctx, "重心 ×4", mx + 18, my - 18, size=28, font="sans", weight=500, color=RED, anchor="left")
         # |centre of mass| vs frequency
         gx0, gx1, gy0, gy1 = 1080.0, 1800.0, 700.0, 330.0
         set_rgba(ctx, WHITE, 0.3)
@@ -258,10 +258,10 @@ class Winding(Scene):
             if f >= fn:
                 xx = gx0 + (fn - self.F0) / (self.F1 - self.F0) * (gx1 - gx0)
                 a = smooth((f - fn) / 12)
-                draw_text(ctx, nm, xx, gy1 - 30, size=26, font="latin", weight=600, color=NOTE_COLS[i], alpha=a)
-                draw_text(ctx, f"{fn:.0f} Hz", xx, gy0 + 30, size=16, font="mono", weight=400, color=WHITE,
+                draw_text(ctx, nm, xx, gy1 - 30, size=34, font="latin", weight=600, color=NOTE_COLS[i], alpha=a)
+                draw_text(ctx, f"{fn:.0f} Hz", xx, gy0 + 30, size=24, font="mono", weight=400, color=WHITE,
                           alpha=0.6 * a)
-        draw_text(ctx, "|重心|", gx0, gy1 - 60, size=18, font="sans", weight=500, color=GOLD, alpha=0.8, anchor="left")
+        draw_text(ctx, "|重心|", gx0, gy1 - 60, size=28, font="sans", weight=500, color=GOLD, alpha=0.8, anchor="left")
         draw_math(ctx, r"$\hat{g}(f)=\int g(t)\,e^{-2\pi i f t}\,dt$", 1440, 190, size=44, color=WHITE,
                   alpha=smooth((lt - 0.3) / 0.5), glow=8)
 
@@ -312,19 +312,19 @@ class Shazam(Scene):
                     ctx.stroke()
         for px, py, _, _ in pts:
             glow_dot(ctx, px, py, 3.5, WHITE, a_pk, 4)
-        draw_text(ctx, "频率 ↑", x0 - 16, y0 + 20, size=18, font="sans", weight=500, color=WHITE, alpha=0.7,
+        draw_text(ctx, "频率 ↑", x0 - 16, y0 + 20, size=28, font="sans", weight=500, color=WHITE, alpha=0.7,
                   anchor="right")
-        draw_text(ctx, "时间 →", x0 + w, y0 + h + 28, size=18, font="sans", weight=500, color=WHITE, alpha=0.7,
+        draw_text(ctx, "时间 →", x0 + w, y0 + h + 28, size=28, font="sans", weight=500, color=WHITE, alpha=0.7,
                   anchor="right")
         # hash list
         hx = 1400.0
-        draw_text(ctx, "指纹 HASH", hx, 200, size=24, font="sans", weight=600, color=GOLD, alpha=a_pk, anchor="left")
+        draw_text(ctx, "指纹 HASH", hx, 200, size=32, font="sans", weight=600, color=GOLD, alpha=a_pk, anchor="left")
         for j, (px, py, fy, tx) in enumerate(pts[-9:]):
             a = a_pk * smooth((lt - 0.8 - 0.1 * j) / 0.3)
             f_hz = 40 * (12000 / 40) ** ((8 + (img.shape[0] - fy)) / 256)
-            draw_text(ctx, f"{f_hz:6.0f} Hz · Δt {((ncol - tx) / fps):4.2f}s", hx, 250 + j * 40, size=20, font="mono",
+            draw_text(ctx, f"{f_hz:6.0f} Hz · Δt {((ncol - tx) / fps):4.2f}s", hx, 250 + j * 40, size=28, font="mono",
                       weight=400, color=WHITE, alpha=0.75 * a, anchor="left")
-        draw_text(ctx, "Shazam · 2003", hx, 250 + 9 * 40 + 20, size=18, font="latin", weight=500, color=CYAN,
+        draw_text(ctx, "Shazam · 2003", hx, 250 + 9 * 40 + 20, size=28, font="latin", weight=500, color=CYAN,
                   alpha=0.8 * a_pk, anchor="left")
 
 
@@ -366,10 +366,10 @@ class Drop3D(Scene):
         u = lt / (self.end - self.start)
         cam = Camera(0.25 - 0.5 * u, 0.5, 14.5 - 1.5 * u, target=(0, 0.2, -6.5), fov=46)
         solid_surface(ctx, cam, X, Y, Z, self.color, edge_alpha=0.75, fill_alpha=0.92, width=1.0)
-        draw_text(ctx, "低频", 360, 900, size=18, font="sans", weight=500, color=WHITE, alpha=0.6)
-        draw_text(ctx, "高频", 1560, 900, size=18, font="sans", weight=500, color=WHITE, alpha=0.6)
-        draw_text(ctx, "LIVE", 1800, 70, size=14, font="latin", weight=600, color=(1, 0.3, 0.35),
-                  alpha=0.8 * (0.6 + 0.4 * math.sin(t * 6)), anchor="right", tracking=0.4)
+        draw_text(ctx, "低频", 360, 900, size=28, font="sans", weight=500, color=WHITE, alpha=0.6)
+        draw_text(ctx, "高频", 1560, 900, size=28, font="sans", weight=500, color=WHITE, alpha=0.6)
+        draw_text(ctx, "LIVE", 1800, 70, size=22, font="latin", weight=600, color=(1, 0.3, 0.35),
+                  alpha=0.8 * (0.6 + 0.4 * math.sin(t * 6)), anchor="right", tracking=0.18)
 
     def effects(self, t, lt):
         return {"flash": 0.3 * math.exp(-max(0.0, lt) / 0.2), "chroma": 1.5 * beat_pulse(t, 0.1)}
@@ -396,7 +396,7 @@ class NoiseMP3(Scene):
         for i, (y, sig, col, lab) in enumerate(rows):
             a = smooth((lt - 0.2 * i) / 0.4)
             stroke_poly(ctx, np.stack([xs, y - 70 * sig], 1), col, 2.4, a, glow=0.6)
-            draw_text(ctx, lab, x0 - 10, y, size=20, font="sans", weight=500, color=col, alpha=a, anchor="right")
+            draw_text(ctx, lab, x0 - 10, y, size=28, font="sans", weight=500, color=col, alpha=a, anchor="right")
         draw_text(ctx, "+", (x0 + x1) / 2, 405, size=44, font="latin", weight=300, color=WHITE, alpha=0.7)
         draw_text(ctx, "=", (x0 + x1) / 2, 615, size=44, font="latin", weight=300, color=WHITE, alpha=0.7)
         draw_text(ctx, "降噪耳机", (x0 + x1) / 2, 170, size=34, font="serif", weight=700, color=WHITE, glow=6,
@@ -427,8 +427,8 @@ class NoiseMP3(Scene):
         ctx.set_dash([5, 5])
         stroke_poly(ctx, np.stack([tx, gb - gh * thr], 1), RED, 2.0, 0.9)
         ctx.set_dash([])
-        draw_text(ctx, "掩蔽阈值", gx1, gb - gh - 20, size=18, font="sans", weight=500, color=RED, anchor="right")
-        draw_text(ctx, "灰色 = 被掩蔽，听不见 → 删除", (gx0 + gx1) / 2, gb + 40, size=20, font="sans", weight=400,
+        draw_text(ctx, "掩蔽阈值", gx1, gb - gh - 20, size=28, font="sans", weight=500, color=RED, anchor="right")
+        draw_text(ctx, "灰色 = 被掩蔽，听不见 → 删除", (gx0 + gx1) / 2, gb + 40, size=28, font="sans", weight=400,
                   color=WHITE, alpha=0.75)
         draw_text(ctx, "MP3 / AAC", (gx0 + gx1) / 2, 170, size=34, font="latin", weight=700, color=WHITE, glow=6,
                   glow_alpha=0.3, tracking=0.1)

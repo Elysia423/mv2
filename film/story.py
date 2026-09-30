@@ -91,19 +91,25 @@ CHORDS = {
     "C": {"root": "C", "tones": ["C", "E", "G"], "pad": ["C3", "G3", "C4", "E4", "G4"], "bass": "C2"},
     "G": {"root": "G", "tones": ["G", "B", "D"], "pad": ["G2", "D3", "G3", "B3", "D4"], "bass": "G1"},
     "Am9": {"root": "A", "tones": ["A", "C", "E", "B"], "pad": ["A2", "E3", "A3", "B3", "C4", "E4"], "bass": "A1"},
+    "Em": {"root": "E", "tones": ["E", "G", "B"], "pad": ["E3", "B3", "E4", "G4"], "bass": "E2"},
+    "Dm": {"root": "D", "tones": ["D", "F", "A"], "pad": ["D3", "A3", "D4", "F4"], "bass": "D2"},
+    "E": {"root": "E", "tones": ["E", "G#", "B"], "pad": ["E3", "B3", "E4", "G#4"], "bass": "E2"},
 }
-PROG = ["Am", "F", "C", "G"]
+PROG = ["Am", "F", "C", "G"]      # home: chapter 1, the sound showcase, the finale
+PROG_2 = ["F", "G", "Em", "Am"]   # chapter 2 lifts
+PROG_4 = ["Dm", "G", "C", "Am"]   # chapter 4 (images)
+PROG_B = ["Am", "G", "F", "E"]    # 'and beyond': the Andalusian cadence under motif B
 
 
 def chord_events():
     """List of (start, end, chord_name)."""
     ev = []
 
-    def cyc(a, b, step=4.0, start_idx=0):
+    def cyc(a, b, step=4.0, start_idx=0, prog=PROG):
         t = a
         i = start_idx
         while t < b - 1e-6:
-            ev.append((t, min(b, t + step), PROG[i % 4]))
+            ev.append((t, min(b, t + step), prog[i % 4]))
             t += step
             i += 1
 
@@ -111,15 +117,17 @@ def chord_events():
     ev.append((12.0, 15.0, "Am9"))
     ev.append((15.0, 18.0, "F"))
     cyc(18.0, 42.0)
-    cyc(42.0, 66.0)
+    cyc(42.0, 66.0, prog=PROG_2)
     ev.append((66.0, 80.0, "Am"))
     cyc(80.0, 88.0)
     cyc(88.0, 104.0)
-    cyc(104.0, 130.0)
-    cyc(130.0, 150.0)
+    cyc(104.0, 130.0, prog=PROG_4)
+    cyc(130.0, 146.0, prog=PROG_B)
+    ev.append((146.0, 150.0, "Am"))
     ev.append((150.0, 154.0, "Am"))
     ev.append((154.0, 158.0, "G"))
-    cyc(158.0, 178.0)
+    cyc(158.0, 174.0, prog=PROG_B)
+    ev.append((174.0, 178.0, "Am"))
     cyc(178.0, 190.0)
     ev.append((190.0, 194.0, "Am"))
     ev.append((194.0, 198.0, "F"))
@@ -139,6 +147,14 @@ def chord_at(t):
 
 # the pure chord shown in the sound chapter (exactly three sine waves)
 SOUND_CHORD = [("A3", 220.0), ("C4", freq("C4")), ("E4", freq("E4"))]
+
+# motif B (beats, note) over Am G F E, 2 bars per chord -- used in 'and beyond'
+MELODY_B = [
+    (1, "A4"), (1, "C5"), (1.5, "E5"), (0.5, "D5"), (2, "C5"), (1, "B4"), (1, "A4"),
+    (1, "B4"), (1, "D5"), (1.5, "G5"), (0.5, "F5"), (2, "E5"), (2, "D5"),
+    (1, "C5"), (1, "F5"), (1.5, "A5"), (0.5, "G5"), (1, "F5"), (1, "E5"), (1, "D5"), (1, "C5"),
+    (1.5, "B4"), (0.5, "G#4"), (1, "B4"), (1, "E5"), (3, "E5"), (1, None),
+]
 
 # lead melody (beats, note or None) over an 8-bar Am F C G phrase (2 bars per chord)
 MELODY = [

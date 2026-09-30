@@ -32,77 +32,111 @@ def all_scenes():
         body += family_scenes()
     except ImportError:
         pass
-    try:
-        from .finale import Finale, Heat3D, Montage
-        return body + [Heat3D(), Montage(body), Finale()]
-    except ImportError:
-        return body
+    from .finale import Finale, Heat3D, Montage
+    scenes = body + [Heat3D(), Montage(body), Finale()]
+    _configure(scenes)
+    return scenes
+
+
+# hand-overs between shots: (kind, seconds before the cut, seconds after, question card for chapter irises)
+TRANS = {
+    S.T_EULER: ("iris", 0.6, 0.95, "从一个圆说起"),
+    S.T_SQUARE: ("zoom", 0.2, 0.25, None),
+    S.T_PANELS: ("iris", 0.6, 0.95, "那么，任何图形呢？"),
+    S.T_BUTTERFLY: ("zoom", 0.2, 0.25, None),
+    S.T_QUICK: ("push_l", 0.2, 0.2, None),
+    S.T_PTOLEMY: ("zoom", 0.2, 0.25, None),
+    S.T_CHORD: ("iris", 0.6, 0.95, "声音呢？"),
+    S.T_WIND: ("push_l", 0.2, 0.2, None),
+    S.T_EAR: ("zoom", 0.2, 0.25, None),
+    S.T_SHAZAM: ("push_r", 0.2, 0.2, None),
+    S.T_DROP: ("zoom", 0.15, 0.2, None),
+    S.T_NOISE: ("push_l", 0.2, 0.2, None),
+    S.T_WAVES2D: ("iris", 0.6, 0.95, "图像呢？"),
+    S.T_IMGBUILD: ("zoom", 0.2, 0.25, None),
+    S.T_SPEC3D: ("push_l", 0.2, 0.2, None),
+    S.T_FILTER: ("push_r", 0.2, 0.2, None),
+    S.T_JPEG: ("zoom", 0.2, 0.25, None),
+    S.T_BEYOND: ("iris", 0.6, 0.95, "只是声音和图像吗？"),
+    S.T_LAPLACE: ("iris", 0.6, 0.95, "只有傅里叶变换吗？"),
+    S.T_WAVELET: ("push_l", 0.2, 0.2, None),
+    S.T_HEAT: ("iris", 0.6, 0.95, "这一切，从哪里开始？"),
+}
+for _i, (_n, _t) in enumerate(S.VIGNETTES):
+    TRANS[_t] = (["zoom", "push_l", "push_r"][_i % 3], 0.2, 0.2, None)
+
+# sub-frames of motion blur for the fast-moving shots
+BLUR = {"ColdOpen": 2, "Title": 3, "Euler3D": 3, "Circles": 3, "TimeFreq3D": 2, "Panels": 2, "Butterfly3D": 3,
+        "QuickDraws": 4, "Ptolemy": 4, "Winding": 3, "Drop3D": 2, "GW": 4, "FFT": 2, "Heat3D": 2, "Finale": 2,
+        "SphHarm": 2, "Quantum": 2, "Tides": 2, "WiFi": 2}
+
+
+def _configure(scenes):
+    for sc in scenes:
+        for t0, tr in TRANS.items():
+            if abs(sc.start - t0) < 1e-6 and type(sc).__name__ not in ("Montage",):
+                sc.trans = tr
+        sc.blur = BLUR.get(type(sc).__name__, 1)
 
 
 CAPTIONS = [
     # cold open
-    (2.4, 5.6, "1807 年，巴黎。傅里叶提交论文《论热的传播》", "Paris, 1807. Fourier submits his memoir on the propagation of heat"),
-    (5.9, 8.8, "他断言：任何函数，都能写成正弦波之和", "He claimed: any function can be written as a sum of sine waves"),
+    (2.3, 5.7, "1807 年，傅里叶断言：", "In 1807, Fourier made a claim:"),
+    (5.9, 8.8, "任何曲线，都是正弦波之和", "any curve is a sum of sine waves"),
     # 01 circles & waves
-    (18.4, 21.8, "欧拉公式：旋转的点，正面看是圆，侧面看是正弦波", "Euler's formula: a spinning point is a circle head-on, a sine wave side-on"),
-    (22.3, 25.3, "方波 = 奇次谐波之和，振幅依次是 1、1/3、1/5……", "A square wave is a sum of odd harmonics: 1, 1/3, 1/5..."),
-    (25.5, 27.9, "每个圆都是一个泛音——听，音色正在变亮", "Each circle is an overtone; hear the tone get brighter"),
-    (28.1, 29.9, "吉布斯现象：跳变处永远多冲出约 9%", "Gibbs phenomenon: a ~9% overshoot that never goes away"),
-    (30.3, 32.9, "转过 90°：时域里的波形，变成频域里的谱线", "Turn 90 degrees: a waveform in time becomes lines in frequency"),
-    (33.2, 35.8, "这就是傅里叶变换：同一个信号，换一套坐标", "That is the Fourier transform: the same signal in new coordinates"),
-    (36.3, 37.9, "锯齿波：包含全部谐波，振幅是 1/n", "Sawtooth: every harmonic, amplitude 1/n"),
-    (38.3, 41.8, "心电监护仪要先滤掉 50 Hz 的工频干扰，才能看清每一次心跳", "ECG monitors filter out 50 Hz mains hum to see each beat"),
+    (19.0, 21.8, "旋转的点：正面看是圆，侧面看是正弦波", "A spinning point: a circle head-on, a sine wave side-on"),
+    (22.3, 25.6, "方波 = 奇次谐波之和", "A square wave is a sum of odd harmonics"),
+    (25.8, 29.9, "每个圆都是一个泛音——听，音色在变亮", "Each circle is an overtone. Hear the tone brighten"),
+    (30.3, 33.0, "转过 90°，波形变成频谱", "Turn 90 degrees: the waveform becomes a spectrum"),
+    (33.2, 35.8, "这就是傅里叶变换", "That is the Fourier transform"),
+    (36.2, 37.9, "锯齿波：全部谐波", "Sawtooth: every harmonic"),
+    (38.2, 41.8, "心电监护仪先滤掉 50 Hz 工频干扰", "ECG monitors first filter out 50 Hz mains hum"),
     # 02 drawing
-    (42.3, 45.0, "让圆在平面上转：半径 = 振幅，初始角度 = 相位", "Circles in a plane: radius is amplitude, starting angle is phase"),
-    (45.2, 47.8, "8、24、80、400 个圆：项数越多，误差越小", "8, 24, 80, 400 circles: more terms, less error"),
-    (48.3, 51.4, "600 个圆，转速都是基频的整数倍", "600 circles, each spinning at a whole multiple of one frequency"),
-    (51.7, 54.7, "沿时间轴展开，笔尖的轨迹是一件三维雕塑", "Unrolled along time, the pen traces a sculpture in 3D"),
-    (55.0, 57.8, "压回平面，就是一只蝴蝶", "Flatten it, and it is a butterfly"),
-    (58.2, 61.8, "换一组系数，同一台“圆的机器”能画出任何东西", "Change the coefficients and the same machine draws anything"),
-    (62.3, 65.8, "公元 150 年，托勒密就用“本轮”解释火星逆行——圆套圆，古已有之", "c. 150 AD: Ptolemy's epicycles explained the retrograde loops of Mars"),
+    (43.0, 47.6, "半径是振幅，起始角是相位", "Radius is amplitude, starting angle is phase"),
+    (48.4, 51.8, "沿时间轴展开，笔尖画出一件三维雕塑", "Unrolled along time, the pen draws a 3D sculpture"),
+    (55.0, 57.8, "压回平面：600 个圆，一只蝴蝶", "Flattened: 600 circles, one butterfly"),
+    (58.3, 61.8, "换一组系数，就能画出任何东西", "New coefficients draw anything"),
+    (62.3, 65.8, "托勒密的“本轮”：圆套圆，解释火星逆行", "Ptolemy's epicycles explained the loops of Mars"),
     # 03 sound
-    (66.3, 68.9, "声音是空气压力的波动：这是一个 A 小三和弦", "Sound is a pressure wave: this is an A minor chord"),
-    (69.1, 71.8, "拆开它：220 Hz、262 Hz、330 Hz 三个正弦波", "Unmixed: three sine waves at 220, 262 and 330 Hz"),
-    (72.3, 75.8, "把波形缠绕在圆上，慢慢改变缠绕的频率……", "Wrap the wave around a circle and sweep the winding frequency..."),
-    (76.0, 79.8, "频率对上时，重心猛地偏离圆心——这就是傅里叶积分", "When it matches a note, the centre of mass jumps: the Fourier integral"),
-    (80.3, 83.8, "耳蜗：约 3500 个内毛细胞沿螺旋排开，从 20 kHz 到 20 Hz", "The cochlea: ~3,500 inner hair cells tuned from 20 kHz down to 20 Hz"),
-    (84.3, 87.8, "听歌识曲：取出频谱里的亮点，连成一张“星图”指纹", "Song recognition turns spectrogram peaks into a constellation fingerprint"),
-    (88.4, 91.8, "三维频谱：横向是频率，高度是能量，纵深是时间", "A 3D spectrogram: frequency across, energy up, time receding"),
-    (92.0, 94.3, "这就是此刻正在播放的配乐", "This is the soundtrack playing right now"),
-    (94.7, 97.3, "降噪耳机：生成反相的波，与噪声相加归零", "Noise cancelling: add the inverted wave and the noise sums to zero"),
-    (97.5, 99.8, "MP3：删去被掩蔽、听不见的频率，体积只剩约 1/10", "MP3 drops masked, inaudible frequencies: about 1/10 the size"),
+    (67.0, 71.6, "声音是空气的振动，和弦由三个正弦波组成", "Sound is vibrating air; this chord is three sine waves"),
+    (72.3, 75.8, "把声波缠绕在圆上，改变转速", "Wrap the sound around a circle and change the speed"),
+    (76.0, 79.8, "对上音高时重心跳出——这就是傅里叶积分", "At each note the centre of mass jumps: the Fourier integral"),
+    (80.3, 83.8, "耳蜗：约 3500 个毛细胞，按频率排开", "The cochlea: ~3,500 hair cells sorted by pitch"),
+    (84.3, 87.8, "听歌识曲：频谱亮点连成指纹", "Song ID: spectrogram peaks become a fingerprint"),
+    (88.4, 92.8, "你正在听的配乐，它的三维频谱", "The music you are hearing, as a 3D spectrum"),
+    (94.7, 97.2, "降噪耳机：反相波抵消噪声", "Noise cancelling: an inverted wave cancels the noise"),
+    (97.4, 99.8, "MP3：删掉听不见的频率", "MP3 drops the frequencies you cannot hear"),
     # 04 images
-    (100.3, 103.8, "图像是二维信号，它的“正弦波”是一道道起伏的波纹", "Images are 2D signals; their sine waves are ripples"),
-    (104.3, 107.8, "按能量从大到小，把波纹一道道叠加……", "Add the ripples, strongest first..."),
-    (108.0, 111.8, "只用 1% 的波纹，猫已经清晰可辨", "With 1% of the ripples, the cat is already clear"),
-    (112.3, 115.1, "照片的频谱：能量集中在中心的低频", "A photo's spectrum: most energy sits in the low frequencies"),
-    (115.3, 117.8, "高频能量比低频弱几个数量级——所以图像能被大幅压缩", "Highs are orders of magnitude weaker: that is why images compress"),
-    (118.3, 120.8, "低通：只留低频——模糊，就像失焦", "Low-pass: keep the lows, and it blurs like defocus"),
-    (121.0, 123.8, "高通：只留高频——只剩边缘，像一幅素描", "High-pass: keep the highs, and only the edges remain"),
-    (124.3, 127.0, "JPEG：切成 8×8 小块，用 64 种余弦波纹（DCT）表示", "JPEG: 8x8 blocks written in 64 cosine patterns (the DCT)"),
-    (127.2, 129.8, "丢掉人眼不敏感的高频，文件缩小约 10 倍", "Drop the highs the eye barely notices: about 10x smaller"),
+    (101.0, 103.8, "图像的“正弦波”，是起伏的波纹", "An image's sine waves are ripples"),
+    (106.5, 111.8, "从最强的波纹叠起：只用 1%，猫已清晰可辨", "Strongest ripples first: at 1% the cat is clear"),
+    (112.5, 117.6, "照片的能量集中在低频，所以能被大幅压缩", "A photo's energy sits in the lows, so it compresses well"),
+    (118.3, 120.8, "去掉高频：画面变模糊", "Remove the highs: it blurs"),
+    (121.0, 123.8, "去掉低频：只剩轮廓", "Remove the lows: only edges remain"),
+    (124.3, 129.8, "JPEG：只保留低频波纹，文件小十倍", "JPEG keeps the low-frequency patterns: 10x smaller"),
     # beyond (4 s each)
-    (134.3, 137.8, "1868 年，氦先在太阳光谱中被发现，27 年后才在地球上找到", "Helium was found in the Sun's spectrum in 1868, 27 years before on Earth"),
-    (138.3, 141.8, "远场衍射图就是孔径的傅里叶变换：韦布望远镜的六道星芒由此而来", "Diffraction is the aperture's Fourier transform: hence Webb's six-pointed stars"),
-    (142.3, 145.8, "X 射线衍射图中的“X”，暴露了 DNA 的双螺旋结构", "The X in the diffraction photo gave away DNA's double helix"),
-    (146.3, 149.8, "核磁共振直接测量频率数据，逆傅里叶变换还原出大脑", "MRI measures frequency data; an inverse transform rebuilds the brain"),
-    (150.3, 153.8, "13 亿光年外黑洞合并：0.2 秒内频率从 35 Hz 升到 250 Hz", "Black holes merge 1.3 billion light-years away: 35 to 250 Hz in 0.2 s"),
-    (154.3, 157.8, "原子轨道、宇宙微波背景、全球天气预报，都用它展开", "Atomic orbitals, the cosmic microwave background, global weather models"),
-    (158.3, 161.8, "潮汐是几十个天文周期之和，主太阴半日潮 M2 = 12.42 小时", "Tides are dozens of astronomical cycles added up; M2 = 12.42 hours"),
-    (162.3, 165.8, "数百个子载波并行传输，每个峰值处其余载波恰好为零", "Hundreds of subcarriers side by side, each zero at the others' peaks"),
-    (166.3, 169.8, "位置与动量互为傅里叶变换：一个越窄，另一个就越宽", "Position and momentum are a Fourier pair: squeeze one, the other spreads"),
-    (170.3, 173.8, "大模型用不同频率的正弦波，给每个词标上位置", "Language models mark each token's position with sine waves"),
-    (174.3, 177.8, "N² → N log N。其实高斯在 1805 年就想到了这个算法", "N² to N log N. Gauss had found the same trick in 1805"),
+    (134.3, 137.8, "氦，先在太阳光谱中被发现", "Helium was found in the Sun's spectrum first"),
+    (138.3, 141.8, "衍射图，就是孔径的傅里叶变换", "A diffraction pattern is the aperture's Fourier transform"),
+    (142.3, 145.8, "衍射图里的“X”，暴露了双螺旋", "The X in the pattern revealed the double helix"),
+    (146.3, 149.8, "MRI 测的是频率，逆变换还原出大脑", "MRI measures frequencies; the inverse transform shows the brain"),
+    (150.3, 153.8, "真实数据：两个黑洞合并的“啁啾”", "Real data: the chirp of two merging black holes"),
+    (154.3, 157.8, "球面上的傅里叶：原子轨道、天气预报", "Fourier on a sphere: atomic orbitals, weather models"),
+    (158.3, 161.8, "潮汐：几十个天文周期的叠加", "Tides: dozens of astronomical cycles added up"),
+    (162.3, 165.8, "上千个子载波并行，互不干扰", "Thousands of subcarriers side by side"),
+    (166.3, 169.8, "位置越确定，动量越模糊", "The sharper the position, the blurrier the momentum"),
+    (170.3, 173.8, "大模型用正弦波标记词的位置", "Language models tag word positions with sine waves"),
+    (174.3, 177.8, "FFT：N² 变成 N log N，快了五万倍", "FFT: N² becomes N log N, 50,000x faster"),
     # the family
-    (178.3, 180.9, "拉普拉斯变换：把频率推广到整个复平面，极点决定系统是否稳定", "Laplace: extend frequency to the complex plane; poles decide stability"),
-    (181.1, 183.8, "沿虚轴切一刀，就是傅里叶变换：滤波器与控制器都靠它设计", "Slice along the imaginary axis to get the Fourier transform"),
-    (184.3, 186.9, "短时傅里叶：窗口固定，时间与频率的分辨率此消彼长", "Short-time Fourier: one window size, one fixed trade-off"),
-    (187.1, 189.8, "小波：高频看清时刻，低频看清音高——JPEG 2000 就用它", "Wavelets: sharp timing for highs, sharp pitch for lows; used in JPEG 2000"),
+    (179.0, 181.3, "拉普拉斯变换：把频率推广到复平面", "Laplace: frequency extended to the complex plane"),
+    (181.5, 183.8, "沿虚轴切开，就是傅里叶变换", "Slice the imaginary axis: the Fourier transform"),
+    (184.3, 186.9, "短时傅里叶：窗口固定", "Short-time Fourier: one fixed window"),
+    (187.1, 189.8, "小波：高频看清时刻，低频看清音高", "Wavelets: timing for highs, pitch for lows"),
     # heat & montage
-    (190.3, 193.8, "一切的起点：热方程。每个频率按 e^(−n²t) 衰减", "Where it began: the heat equation. Each frequency decays like e^(−n²t)"),
-    (194.0, 197.8, "高频最先消失——为了解这个方程，傅里叶发明了他的级数", "The highs die first; to solve it, Fourier invented his series"),
+    (191.0, 193.8, "一切的起点：热方程", "Where it began: the heat equation"),
+    (194.0, 197.8, "高频最先消失——傅里叶由此发明了级数", "The highs fade first; Fourier's series was born here"),
     (198.3, 201.8, "从 1807 年的一根铁棒……", "From an iron bar in 1807..."),
-    (202.0, 205.8, "到你口袋里的每一次通话、每一张照片、每一首歌", "to every call, photo and song in your pocket"),
+    (202.0, 205.8, "到你口袋里的每一首歌、每一张照片", "to every song and photo in your pocket"),
+    # finale: the card flips to show the flower's spectrum
+    (211.0, 215.3, "翻过来看：这朵花的频谱，只有 4 根谱线", "Turned sideways, the flower is just four spectral lines"),
 ]
 
 CHAPTERS = [

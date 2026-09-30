@@ -71,15 +71,15 @@ class Laplace3D(Scene):
         axis3(ctx, cam, (-4.4, 0, 0), (4.6, 0, 0), WHITE, 0.5, 1.4, head=12)
         axis3(ctx, cam, (0, 0, -1.8), (0, 0, 3.6), WHITE, 0.5, 1.4, head=12)
         lx, ly, _ = cam.project(np.array([[4.8, 0, 0], [0, 0, 3.9]]))
-        draw_text(ctx, "jω 频率", lx[0] + 10, ly[0], size=22, font="sans", weight=500, color=WHITE, alpha=0.8,
+        draw_text(ctx, "jω 频率", lx[0] + 10, ly[0], size=30, font="sans", weight=500, color=WHITE, alpha=0.8,
                   anchor="left")
-        draw_text(ctx, "σ 衰减", lx[1], ly[1] + 24, size=22, font="sans", weight=500, color=WHITE, alpha=0.8)
+        draw_text(ctx, "σ 衰减", lx[1], ly[1] + 24, size=30, font="sans", weight=500, color=WHITE, alpha=0.8)
         draw_math(ctx, r"$F(s)=\int_0^{\infty} f(t)\,e^{-st}\,dt,\quad s=\sigma+i\omega$", W / 2, 140, size=38,
                   color=WHITE, alpha=smooth((lt - 0.3) / 0.5), glow=6)
         a = smooth((lt - 3.2) / 0.5)
-        draw_text(ctx, "σ = 0 的切片 = 傅里叶变换", 1500, 300, size=26, font="sans", weight=600, color=GOLD, alpha=a,
+        draw_text(ctx, "σ = 0 的切片 = 傅里叶变换", 1500, 300, size=34, font="sans", weight=600, color=GOLD, alpha=a,
                   glow=6, glow_alpha=0.3)
-        draw_text(ctx, "极点 ×：在左半平面 → 系统稳定", 1500, 345, size=20, font="sans", weight=400, color=RED,
+        draw_text(ctx, "极点 ×：在左半平面 → 系统稳定", 1500, 345, size=28, font="sans", weight=400, color=RED,
                   alpha=0.9 * smooth((lt - 1.2) / 0.5))
 
 
@@ -117,9 +117,9 @@ class Wavelet(Scene):
             set_rgba(ctx, col, 0.5 * a)
             ctx.set_line_width(1)
             ctx.stroke()
-        draw_text(ctx, "时间 →", x0 + w, y0 + h + 28, size=16, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
+        draw_text(ctx, "时间 →", x0 + w, y0 + h + 28, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
                   anchor="right")
-        draw_text(ctx, "频率 ↑", x0 - 12, y0 + 12, size=16, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
+        draw_text(ctx, "频率 ↑", x0 - 12, y0 + 12, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
                   anchor="right")
 
     def draw(self, cv, t, lt):
@@ -130,8 +130,8 @@ class Wavelet(Scene):
         for k, (x0, title, sub, col) in enumerate([(160.0, "短时傅里叶 STFT", "窗口宽度固定", CYAN),
                                                     (1010.0, "小波 WAVELET", "高频窄、低频宽", GOLD)]):
             a = smooth((lt - 0.2 - 0.4 * k) / 0.4)
-            draw_text(ctx, title, x0, 150, size=30, font="sans", weight=700, color=col, alpha=a, anchor="left")
-            draw_text(ctx, sub, x0, 192, size=20, font="sans", weight=400, color=WHITE, alpha=0.7 * a, anchor="left")
+            draw_text(ctx, title, x0, 150, size=36, font="sans", weight=700, color=col, alpha=a, anchor="left")
+            draw_text(ctx, sub, x0, 192, size=28, font="sans", weight=400, color=WHITE, alpha=0.7 * a, anchor="left")
             for j, (f, width) in enumerate([(3, 0.28), (8, 0.28 if k == 0 else 0.11), (20, 0.28 if k == 0 else 0.045)]):
                 cx = 0.18 + 0.32 * j
                 env = np.exp(-((xs - cx) / (width / 2.5)) ** 2)
@@ -156,9 +156,9 @@ class Wavelet(Scene):
         if c > 0:
             for x0 in (160.0, 1010.0):
                 xx = x0 + self.T_CLICK * 750
-                draw_text(ctx, "咔哒声", xx, 360, size=18, font="sans", weight=500, color=RED, alpha=c)
+                draw_text(ctx, "咔哒声", xx, 360, size=28, font="sans", weight=500, color=RED, alpha=c)
                 yy = 380 + 450 - self.T_TONE * 450
-                draw_text(ctx, "低音", x0 + 760, yy, size=18, font="sans", weight=500, color=RED, alpha=c,
+                draw_text(ctx, "低音", x0 + 760, yy, size=28, font="sans", weight=500, color=RED, alpha=c,
                           anchor="left")
 
 

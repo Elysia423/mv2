@@ -73,54 +73,76 @@ def line3_depth(ctx, cam, P, color, width=2.0, alpha=1.0, near=None, far=None, s
         ctx.stroke()
 
 
-def wire_surface(ctx, cam, X, Y, Z, color_fn, width=1.0, alpha=1.0, every=1):
-    """Wireframe of a height field sampled on a grid (X,Y,Z all (nu,nv)); lines along both directions.
-
-    color_fn(value_array) -> list of colours per vertex row (uses Z for colour).
-    """
+def wire_surface(ctx, cam, X, Y, Z, color_fn, width=1.0, alpha=1.0, every=1, fog=0.6):
+    """Wireframe of a height field sampled on a grid (X,Y,Z all (nu,nv)); lines along both directions,
+    dimmer and thinner with distance."""
     sx, sy, sz = cam.project(np.stack([X, Y, Z], -1))
+    near, far = sz.min(), sz.max()
+    fk = 1 - fog * np.clip((sz - near) / max(far - near, 1e-6), 0, 1)
     nu, nv = X.shape
     for i in range(0, nu, every):
-        _stroke_colored(ctx, sx[i], sy[i], Y[i], color_fn, width, alpha)
+        _stroke_colored(ctx, sx[i], sy[i], Y[i], color_fn, width, alpha, fade=fk[i])
     for j in range(0, nv, every):
-        _stroke_colored(ctx, sx[:, j], sy[:, j], Y[:, j], color_fn, width, alpha)
+        _stroke_colored(ctx, sx[:, j], sy[:, j], Y[:, j], color_fn, width, alpha, fade=fk[:, j])
 
 
-def _stroke_colored(ctx, xs, ys, vals, color_fn, width, alpha, chunk=6):
+def _stroke_colored(ctx, xs, ys, vals, color_fn, width, alpha, chunk=6, fade=None):
     n = len(xs)
     for i in range(0, n - 1, chunk):
         j = min(n, i + chunk + 1)
         c = color_fn(float(np.mean(vals[i:j])))
+        f = 1.0 if fade is None else float(np.mean(fade[i:j]))
         polyline(ctx, np.stack([xs[i:j], ys[i:j]], 1))
-        set_rgba(ctx, c[:3], alpha * (c[3] if len(c) > 3 else 1.0))
-        ctx.set_line_width(width)
+        set_rgba(ctx, c[:3], alpha * f * (c[3] if len(c) > 3 else 1.0))
+        ctx.set_line_width(width * (0.5 + 0.5 * f))
         ctx.stroke()
 
 
-def solid_surface(ctx, cam, X, Y, Z, color_fn, edge_alpha=0.5, fill_alpha=0.9, width=0.8, shade=True):
-    """Painter's-algorithm quads of a surface grid; colour from the mean height (Y)."""
+LIGHT = np.array([-0.45, 0.8, 0.4]) / np.linalg.norm([-0.45, 0.8, 0.4])
+
+
+def solid_surface(ctx, cam, X, Y, Z, color_fn, edge_alpha=0.5, fill_alpha=0.9, width=0.8, shade=True, fog=0.65,
+                  light=LIGHT):
+    """Painter's-algorithm quads of a surface grid.
+
+    Colour comes from the mean height (Y); each quad is lit by a directional light (two-sided Lambert plus a
+    small specular glint on the edges) and fades into distance fog.
+    """
     P = np.stack([X, Y, Z], -1)
     sx, sy, sz = cam.project(P)
-    nu, nv = X.shape
-    quads = []
-    for i in range(nu - 1):
-        for j in range(nv - 1):
-            d = (sz[i, j] + sz[i + 1, j] + sz[i, j + 1] + sz[i + 1, j + 1]) * 0.25
-            quads.append((d, i, j))
-    quads.sort(key=lambda q: -q[0])
-    for d, i, j in quads:
-        v = (Y[i, j] + Y[i + 1, j] + Y[i, j + 1] + Y[i + 1, j + 1]) * 0.25
-        c = color_fn(v)
+    # per-quad normals from the two diagonals
+    d1 = P[1:, 1:] - P[:-1, :-1]
+    d2 = P[1:, :-1] - P[:-1, 1:]
+    nrm = np.cross(d1, d2)
+    nrm /= np.linalg.norm(nrm, axis=-1, keepdims=True) + 1e-9
+    diff = np.abs(nrm @ light)
+    view = cam.f
+    half = (light - view) / np.linalg.norm(light - view)
+    spec = np.abs(nrm @ half) ** 24
+    depth = (sz[1:, 1:] + sz[:-1, :-1] + sz[1:, :-1] + sz[:-1, 1:]) * 0.25
+    near, far = depth.min(), depth.max()
+    fogk = np.clip((depth - near) / max(far - near, 1e-6), 0, 1) * fog
+    hv = (Y[1:, 1:] + Y[:-1, :-1] + Y[1:, :-1] + Y[:-1, 1:]) * 0.25
+    order = np.argsort(-depth, axis=None)
+    nv1 = X.shape[1] - 1
+    for q in order:
+        i, j = divmod(int(q), nv1)
+        c = color_fn(float(hv[i, j]))
+        lit = (0.16 + 0.84 * diff[i, j]) if shade else 1.0
+        fk = 1 - fogk[i, j]
         ctx.move_to(sx[i, j], sy[i, j])
         ctx.line_to(sx[i + 1, j], sy[i + 1, j])
         ctx.line_to(sx[i + 1, j + 1], sy[i + 1, j + 1])
         ctx.line_to(sx[i, j + 1], sy[i, j + 1])
         ctx.close_path()
-        k = 0.25 if shade else 1.0
+        k = 0.42 * lit * fk
         ctx.set_source_rgba(c[0] * k, c[1] * k, c[2] * k, fill_alpha)
         ctx.fill_preserve()
-        set_rgba(ctx, c[:3], edge_alpha)
-        ctx.set_line_width(width)
+        g = spec[i, j] * 0.6
+        ec = (min(1.0, c[0] * (0.55 + 0.45 * lit) + g), min(1.0, c[1] * (0.55 + 0.45 * lit) + g),
+              min(1.0, c[2] * (0.55 + 0.45 * lit) + g))
+        set_rgba(ctx, ec, edge_alpha * (0.35 + 0.65 * fk))
+        ctx.set_line_width(width * (0.6 + 0.6 * fk))
         ctx.stroke()
 
 

@@ -112,9 +112,9 @@ class ColdOpen(Scene):
         if a > 0:
             draw_text_chars(ctx, "不可能。", W / 2, H / 2 - 20, t - 9.0, size=96, font="serif", weight=800,
                             color=WHITE, alpha=a, tracking=0.02, stagger=0.08, dur=0.3, rise=10, glow=14, glow_alpha=0.6)
-            draw_text(ctx, "—— 拉格朗日  J.-L. LAGRANGE", W / 2 + 180, H / 2 + 80, size=24, font="sans", weight=400,
+            draw_text(ctx, "—— 拉格朗日  J.-L. LAGRANGE", W / 2 + 180, H / 2 + 80, size=32, font="sans", weight=400,
                       color=(0.85, 0.85, 0.9), alpha=a * smooth((t - 9.6) / 0.4), anchor="center", tracking=0.1)
-            draw_text(ctx, "论文被搁置 15 年，直到 1822 年才以《热的解析理论》出版", W / 2, H / 2 + 150, size=22,
+            draw_text(ctx, "论文被搁置 15 年，直到 1822 年才以《热的解析理论》出版", W / 2, H / 2 + 150, size=30,
                       font="sans", weight=400, color=GOLD, alpha=0.85 * a * smooth((t - 9.5) / 0.3), tracking=0.06)
 
     def effects(self, t, lt):
@@ -123,7 +123,7 @@ class ColdOpen(Scene):
 
 
 class Title(Scene):
-    start, end = 12.0, 17.6
+    start, end = 12.0, 18.0
     fade_out = 0.5
     bloom = 0.8
 
@@ -191,10 +191,10 @@ class Title(Scene):
         a = smooth(lt / 0.25)
         draw_text(ctx, "傅里叶变换", W / 2, H / 2 - 40, size=150, font="serif", weight=900, color=WHITE, alpha=a,
                   tracking=0.28, glow=16, glow_alpha=0.45, scale=s)
-        draw_text(ctx, "THE FOURIER TRANSFORM", W / 2, H / 2 + 105, size=26, font="latin", weight=300,
+        draw_text(ctx, "THE FOURIER TRANSFORM", W / 2, H / 2 + 105, size=34, font="latin", weight=300,
                   color=(0.8, 0.92, 1.0), alpha=0.9, tracking=0.85, reveal=ease_out((lt - 0.9) / 1.2, 2))
         draw_text_chars(ctx, "万物，皆是波的叠加", W / 2, H / 2 + 185, lt - 2.0, size=34, font="serif", weight=500,
-                        color=GOLD, alpha=0.95, tracking=0.3, stagger=0.07, dur=0.5, glow=8, glow_alpha=0.5)
+                        color=GOLD, alpha=0.95, tracking=0.18, stagger=0.07, dur=0.5, glow=8, glow_alpha=0.5)
         draw_math(ctx, r"$\hat{f}(\omega)=\int_{-\infty}^{\infty} f(t)\,e^{-i\omega t}\,dt$", W / 2, H / 2 + 290,
                   size=40, color=(0.8, 0.9, 1.0), alpha=0.95, reveal=ease_out((lt - 2.9) / 1.4, 2), glow=6)
         ctx.pop_group_to_source()

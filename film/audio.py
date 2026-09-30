@@ -153,7 +153,7 @@ def bass_note(f, dur, release=0.08):
     ph = 2 * np.pi * f * t
     x = np.sin(ph) + 0.28 * np.sin(2 * ph) + 0.1 * np.sin(3 * ph) + 0.04 * np.sin(4 * ph)
     e = env_ar(n, 0.006, release)
-    return x * e * 0.45
+    return x * e * 0.36
 
 
 def kick(gain=1.0):
@@ -250,6 +250,59 @@ def gw_chirp(dur=3.2, t_merge=2.6):
     amp = np.where(t < t_merge, (f / 420) ** 0.9, np.exp(-(t - t_merge) / 0.06))
     x = (np.sin(ph) + 0.35 * np.sin(2 * ph) + 0.15 * np.sin(3 * ph)) * amp
     return x * np.clip(t / 0.3, 0, 1) * 0.6
+
+
+# ------------------------------------------------------------------ signature sounds for the 'beyond' shots
+def mri_knock(dur=3.0):
+    """Rhythmic gradient-coil knocking, as heard inside an MRI scanner."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    tone = sum(np.sin(2 * np.pi * 950 * k * t) / k for k in (1, 3, 5, 7))
+    gate = ((t * 8) % 1 < 0.35).astype(float) * (((t * 2) % 1) < 0.75)
+    gate = onepole_lp(gate, 300)
+    return tone * gate * np.clip(t / 0.05, 0, 1) * np.clip((dur - t) / 0.2, 0, 1) * 0.12
+
+
+def data_blips(dur=1.4, n_blips=28, seed=7):
+    """Modem-like chirps: short sine beeps at scattered 'subcarrier' pitches."""
+    r = np.random.default_rng(seed)
+    n = int(dur * SR)
+    x = np.zeros(n)
+    for _ in range(n_blips):
+        t0 = r.uniform(0, dur - 0.05)
+        f = r.choice([1200, 1500, 1800, 2100, 2400, 2700, 3000])
+        L = int(0.035 * SR)
+        tt = np.arange(L) / SR
+        i0 = int(t0 * SR)
+        x[i0:i0 + L] += np.sin(2 * np.pi * f * tt) * np.sin(np.pi * tt / 0.035) ** 2
+    return x * 0.12
+
+
+def ocean(dur=3.6):
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    nz = sine_noise(n, 150, 3000, tilt=-0.5, seed=11)
+    env = 0.25 + 0.75 * np.sin(np.pi * t / 1.8) ** 2
+    return nz * env * np.clip(t / 0.4, 0, 1) * np.clip((dur - t) / 0.6, 0, 1) * 0.5
+
+
+def gliss(dur=1.6, f0=300.0, f1=1200.0):
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    u = np.sin(np.pi * t / dur)
+    f = f0 * (f1 / f0) ** u
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * u ** 1.5 * 0.12
+
+
+def digital_arp(notes, step=0.07):
+    L = int(step * SR)
+    out = np.zeros(L * len(notes) + SR // 2)
+    tt = np.arange(int(0.25 * SR)) / SR
+    for i, nn in enumerate(notes):
+        f = S.freq(nn)
+        x = sum(np.sin(2 * np.pi * f * k * tt) / k for k in (1, 3, 5)) * np.exp(-tt / 0.06)
+        out[i * L:i * L + len(x)] += x
+    return out * 0.18
 
 
 # ------------------------------------------------------------------ effects
@@ -505,9 +558,9 @@ class Score:
             self.b["drums"].add(t, snare(g * (0.3 + 0.7 * u)), pan=0.1)
             t += step
 
-    def melody(self, a, octave_shift=0, g=1.0):
+    def melody(self, a, octave_shift=0, g=1.0, tune=None):
         t = a
-        for beats, nn in S.MELODY:
+        for beats, nn in (tune or S.MELODY):
             dur = beats * S.BEAT
             if nn is not None:
                 f = S.freq(nn) * 2 ** octave_shift
@@ -560,14 +613,44 @@ class Score:
         self.groove(S.T_BEYOND, gw0, 1, True, "16", True, 1.0)
         self.bassline(S.T_BEYOND, gw0, "drive", 1.0)
         self.arps(S.T_BEYOND, gw0, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
-        self.melody(S.T_BEYOND, 0, 0.9)
+        self.melody(S.T_BEYOND, 0, 0.9, S.MELODY_B)
         self.b["fx"].add(gw0, gw_chirp(3.4, S.GW_MERGE - gw0), 0.9)
         self.b["fx"].add(S.GW_MERGE, impact(3.0), 0.45)
         self.bassline(gw0, gw0 + 4.0, "hold", 0.6)
         self.groove(gw0 + 4.0, S.T_LAPLACE, 1, True, "16", True, 1.0)
         self.bassline(gw0 + 4.0, S.T_LAPLACE, "drive", 1.0)
         self.arps(gw0 + 4.0, S.T_LAPLACE, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
-        self.melody(158.0, 1, 0.75)
+        self.melody(158.0, 0, 0.8, S.MELODY_B)
+        self.melody(158.0, -1, 0.3, S.MELODY_B)
+        # signature sounds for each 'beyond' shot
+        v = dict(S.VIGNETTES)
+        for i, nn in enumerate(["C6", "E6", "G6", "C7", "E7"]):
+            self.b["bell"].add(v["prism"] + 0.3 + 0.06 * i, bell(S.freq(nn), 2.0), 0.3, pan=0.3 * (i - 2))
+        self.b["bell"].add(v["prism"] + 2.2, bell(S.freq("B6"), 2.5), 0.35)       # helium's yellow line
+        for i, nn in enumerate(["E7", "B6", "G#6", "E6"]):
+            self.b["bell"].add(v["optics"] + 0.75 + 0.05 * i, bell(S.freq(nn), 1.6), 0.22, pan=-0.3 + 0.2 * i)
+        for i in range(12):                                                       # a spiral of plucks for the helix
+            nn = ["A4", "C5", "E5", "A5"][i % 4]
+            self.b["arp"].add(v["dna"] + 0.1 + i * 0.09, pluck(S.freq(nn) * (1 + (i // 4) * 1.0), 0.8), 0.25,
+                              pan=math.sin(i * 1.1) * 0.6)
+        self.b["fx"].add(v["mri"] + 0.3, mri_knock(3.2), 0.9)
+        for i, nn in enumerate(["A4", "E5", "A5", "C#6", "E6"]):
+            self.b["bell"].add(v["sph"] + 0.2 + 0.12 * i, bell(S.freq(nn), 3.0), 0.25, pan=0.25 * (i - 2))
+        self.b["fx"].add(v["tides"] + 0.1, ocean(3.7), 0.9)
+        self.b["fx"].add(v["wifi"] + 0.3, data_blips(1.6), 1.0, pan=0.2)
+        self.b["fx"].add(v["quantum"] + 0.2, gliss(1.6, 300, 1400), 1.0)
+        self.b["fx"].add(v["quantum"] + 1.9, gliss(1.6, 1400, 300)[::-1].copy(), 0.8)
+        self.b["fx"].add(v["ai"] + 0.3, digital_arp(["A5", "E6", "C6", "A6", "E6", "C6", "B5", "E6"] * 2), 1.0)
+        ups = ["A4", "C5", "E5", "A5", "C6", "E6", "A6", "C7"]
+        self.b["fx"].add(v["fft"] + 0.2, digital_arp(ups + ups[::-1], 0.045), 0.9)
+        # chapter hand-overs (iris + question card): a low swell and a bell on the cut
+        for t0 in [S.T_EULER, S.T_PANELS, S.T_CHORD, S.T_WAVES2D, S.T_BEYOND, S.T_LAPLACE, S.T_HEAT]:
+            self.b["fx"].add(t0 - 0.6, riser(0.6, 120, 900, 60, int(t0 * 10), 2.0), 0.5)
+            self.b["bell"].add(t0, bell(S.freq("A5"), 3.0), 0.35)
+        # the finale's card flip
+        self.b["fx"].add(S.T_FINALE + 3.8 - 0.4, riser(0.5, 600, 5000, 60, 77, 1.5), 0.5)
+        self.b["bell"].add(S.T_FINALE + 4.25, bell(S.freq("E6"), 3.0), 0.35)
+
         # the wider family: Laplace, wavelets
         self.groove(S.T_LAPLACE, S.T_HEAT - 2.0, 1, False, "8", True, 0.85)
         self.bassline(S.T_LAPLACE, S.T_HEAT - 2.0, "pump", 0.9)
@@ -637,9 +720,8 @@ class Score:
         send = (pad * 0.5 + arp * 0.6 + lead * 0.5 + b["drums"] * 0.15 + b["fx"] * 0.5 + b["bell"] * 1.0
                 + b["tone"] * 0.25 + b["chord"] * 0.35 + lead_fx * 0.5)
         wet = reverb(send, 0.55, 3.5, 0.6)
-        out = (dry + wet) * self.master_env()
-        # glue: gentle compression + limiter
-        out = self.limit(out)
+        out = (dry + wet) * self.master_env() * self.section_gain()
+        out = self.master(out)
         return out.astype(np.float32)
 
     def master_env(self):
@@ -651,18 +733,65 @@ class Score:
         g *= np.clip((S.DURATION - t) / 2.6, 0, 1) ** 1.5
         return g
 
-    def limit(self, x, ceiling=0.93):
-        from scipy.ndimage import maximum_filter1d
-        x = x / (np.percentile(np.abs(x), 99.95) + 1e-9) * 0.9
-        thr = 0.8
-        peak = maximum_filter1d(np.max(np.abs(x), axis=0), int(0.004 * SR))
-        target = np.minimum(1.0, thr / np.maximum(peak, 1e-6))
-        a = math.exp(-1 / (0.15 * SR))
-        g = lfilter([1 - a], [1, -a], target)
-        g = np.minimum(g, target)  # never let a peak through
-        y = x * g
-        y = np.tanh(y * 1.2) / np.tanh(1.2)
-        return y * (ceiling / (np.max(np.abs(y)) + 1e-9))
+    def section_gain(self):
+        """Bigger contrast between quiet and loud passages (dB offsets, smoothed)."""
+        t = np.arange(N) / SR
+        # (start time, dB) held until the next key
+        keys = [(0.0, -5.0), (S.T_TITLE, 0.0), (S.T_EULER, -2.0), (S.T_PANELS, -2.0), (50.0, 0.0), (62.0, -2.0),
+                (S.T_CHORD, -4.5), (S.T_EAR, -3.0), (S.T_DROP, 0.0), (S.T_WAVES2D, -1.5), (S.T_BEYOND, 0.0),
+                (S.T_GW, -1.0), (S.T_GW + 4.0, 0.0), (S.T_LAPLACE, -2.0), (S.T_HEAT, -5.5), (S.T_MONTAGE, -2.0),
+                (S.T_FINALE, 0.0), (S.T_FINALE + 11.0, -4.0)]
+        kt = np.array([k[0] for k in keys])
+        kd = np.array([k[1] for k in keys])
+        db = kd[np.clip(np.searchsorted(kt, t, side="right") - 1, 0, len(kd) - 1)]
+        from scipy.ndimage import uniform_filter1d
+        db = uniform_filter1d(db, int(0.4 * SR))
+        return 10 ** (db / 20)
+
+    def master(self, x, lufs=-14.0, ceiling_dbtp=-1.0):
+        """EQ (rumble cut, less mud, presence and air), loudness-normalise, then a gentle true-peak limiter."""
+        from scipy.signal import sosfilt, butter
+        x = sosfilt(butter(2, 30, "highpass", fs=SR, output="sos"), x, axis=-1)
+        x = biquad(x, "lowshelf", 140, -2.5)
+        x = biquad(x, "peak", 350, -1.5, q=0.9)
+        x = biquad(x, "peak", 3000, +4.0, q=0.8)
+        x = biquad(x, "highshelf", 9000, +3.0)
+        import pyloudnorm as pyln
+        meter = pyln.Meter(SR)
+        cur = meter.integrated_loudness(x.T.astype(np.float64))
+        x = x * 10 ** ((lufs - cur) / 20)
+        # true-peak estimate via 4x oversampling, then a smooth look-ahead gain reduction
+        from scipy.signal import resample_poly
+        from scipy.ndimage import maximum_filter1d, minimum_filter1d
+        ceil = 10 ** (ceiling_dbtp / 20)
+        over = np.max(np.abs(resample_poly(x, 4, 1, axis=-1)), axis=0)
+        peak = over.reshape(-1, 4).max(axis=1)[: x.shape[1]]
+        need = np.minimum(1.0, ceil / np.maximum(peak, 1e-9))
+        la = int(0.005 * SR)
+        g = minimum_filter1d(need, 2 * la + 1)
+        a = math.exp(-1 / (0.12 * SR))
+        g = np.minimum(lfilter([1 - a], [1, -a], g), g)
+        return x * g
+
+
+def biquad(x, kind, f0, gain_db, q=0.707):
+    """RBJ cookbook biquad applied along the last axis."""
+    A = 10 ** (gain_db / 40)
+    w0 = 2 * math.pi * f0 / SR
+    cw, sw = math.cos(w0), math.sin(w0)
+    alpha = sw / (2 * q)
+    if kind == "peak":
+        b = [1 + alpha * A, -2 * cw, 1 - alpha * A]
+        a = [1 + alpha / A, -2 * cw, 1 - alpha / A]
+    elif kind == "lowshelf":
+        sa = 2 * math.sqrt(A) * alpha
+        b = [A * ((A + 1) - (A - 1) * cw + sa), 2 * A * ((A - 1) - (A + 1) * cw), A * ((A + 1) - (A - 1) * cw - sa)]
+        a = [(A + 1) + (A - 1) * cw + sa, -2 * ((A - 1) + (A + 1) * cw), (A + 1) + (A - 1) * cw - sa]
+    else:  # highshelf
+        sa = 2 * math.sqrt(A) * alpha
+        b = [A * ((A + 1) + (A - 1) * cw + sa), -2 * A * ((A - 1) + (A + 1) * cw), A * ((A + 1) + (A - 1) * cw - sa)]
+        a = [(A + 1) - (A - 1) * cw + sa, 2 * ((A - 1) - (A + 1) * cw), (A + 1) - (A - 1) * cw - sa]
+    return lfilter(np.array(b) / a[0], np.array(a) / a[0], x, axis=-1)
 
 
 def write_wav(path, x):
