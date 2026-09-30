@@ -47,6 +47,23 @@ python -m film.render video --scale 0.6666667 --crf 12                  # 720p60
 python -m film.render video --scale 0.5 --fps 30 --from 42 --to 66      # 低分辨率、30 帧预览某一段
 ```
 
+## 本地渲染 4K60（上传视频平台用）
+
+```bash
+# 只拉代码，不下载仓库历史里的旧视频
+git clone --depth 1 --filter=blob:none --sparse -b claude/beautiful-mccarthy-p311jo https://github.com/Elysia423/mv2
+cd mv2 && git sparse-checkout set film docs
+python3 -m venv .venv && source .venv/bin/activate
+pip install numpy scipy pycairo opencv-python-headless pillow matplotlib fonttools scikit-image pooch imageio-ffmpeg h5py pyloudnorm
+./fetch_assets.sh && python -m film.render audio
+python -m film.render video --scale 2 --from 88 --to 94 --crf 14 --out test_4k.mp4      # 先试 6 秒
+python -m film.render video --scale 2 --crf 14 --preset slow --abr 320k --workers 14 --out fourier_4k60.mp4
+```
+
+- 系统依赖：Ubuntu/WSL 装 `git curl build-essential python3-venv python3-dev libcairo2-dev pkg-config`；macOS 装 `brew install cairo pkg-config`。Windows 请在 WSL2 里运行（渲染器用到 fork 多进程）。
+- 每个渲染进程在 4K 下约占 1.5 GB 内存，`--workers` 取“可用内存 GB ÷ 2”和 CPU 线程数中较小的那个。WSL2 默认只分到一半内存，可在 `%UserProfile%\.wslconfig` 里写 `[wsl2]`、`memory=28GB`、`processors=24`，再运行 `wsl --shutdown` 生效。
+- 传平台用 CRF 14 就够（平台会重新压缩）；存档要更高质量可以用 CRF 10。
+
 ## 代码结构
 
 - `film/story.py`：全片时间轴。节拍、和弦、旋律、第一章“圆的数量”调度，**画面和声音共用这一份**。

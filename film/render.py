@@ -228,12 +228,26 @@ def cmd_video(scale, t_from, t_to, out, workers, crf, preset="medium", abr="256k
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     t0 = time.time()
     ctx = mp.get_context("fork")
+    # Bound the frames in flight: if the encoder is slower than the workers (likely at 4K on a fast CPU), finished
+    # frames would otherwise pile up in memory (33 MB each at 4K). The pool's task thread blocks on the semaphore.
+    import threading
+    slots = threading.Semaphore(max(4, 3 * workers))
+
+    def jobs():
+        for i in range(f0, f1):
+            slots.acquire()
+            yield i, scale
+
+    n = f1 - f0
     with ctx.Pool(workers) as pool:
-        for k, (fi, buf) in enumerate(pool.imap(_worker, [(i, scale) for i in range(f0, f1)], chunksize=2)):
+        for k, (fi, buf) in enumerate(pool.imap(_worker, jobs(), chunksize=2)):
             proc.stdin.write(buf)
+            slots.release()
             if k % 150 == 0:
                 el = time.time() - t0
-                print(f"frame {fi} ({fi / FPS:.1f}s)  {k / max(el, 1e-6):.2f} fps", flush=True)
+                rate = k / max(el, 1e-6)
+                eta = (n - k) / rate / 60 if rate > 0 else float("nan")
+                print(f"frame {fi} ({fi / FPS:.1f}s)  {rate:.2f} fps  ~{eta:.0f} min left", flush=True)
     proc.stdin.close()
     proc.wait()
     print(f"done in {time.time() - t0:.1f}s -> {out}")
