@@ -251,7 +251,7 @@ class Waves3D(ImageBase):
                           width=1.0)
         a = 1 - smooth((lt - 1.5) / 0.4)
         for i, x in enumerate([420, 960, 1500]):
-            draw_text(ctx, ["低频 · 横向", "中频 · 斜向", "高频 · 斜向"][i], x, 820, size=30, font="sans", weight=500,
+            draw_text(ctx, ["低频", "中频", "高频"][i], x, 820, size=30, font="sans", weight=500,
                       color=[CYAN, VIOLET, MAGENTA][i], alpha=a)
         draw_text(ctx, "叠加 = 一张“图像”", W / 2, 150, size=36, font="sans", weight=600, color=GOLD,
                   alpha=smooth((lt - 2.4) / 0.5), tracking=0.1)

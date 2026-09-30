@@ -171,16 +171,25 @@ class Circles(Scene):
         # target ghost (ideal square / saw / ecg)
         span = (W - 40 - self.X0) / self.V
         ts = np.linspace(max(S.T_SQUARE - 1.0, t - span), t, 700)
-        ys = self.tip_y(ts)
         xs = self.X0 + (t - ts) * self.V
-        As = np.array([self.scale(x) for x in ts])
-        cys = np.array([self.CY + 60 * S.c1_shape_weights(x)[2] for x in ts])
+        if t < S.C1_SAW:
+            # while circles are being added, the trace is the pen's history (earlier = fewer circles)
+            ys = self.tip_y(ts)
+            As = np.array([self.scale(x) for x in ts])
+            cys = np.array([self.CY + 60 * S.c1_shape_weights(x)[2] for x in ts])
+        else:
+            # after that the whole trace shows the current shape, so a new shape morphs in place instead of
+            # scrolling in behind the old one
+            thh = np.array([S.c1_theta(x) for x in ts])
+            ys = np.imag(np.exp(1j * np.outer(thh, S.C1_K)) @ c) + we * S.C1_ECG_DC
+            As = np.full_like(ts, A)
+            cys = np.full_like(ts, cy)
         ghost_a = window(t, 25.0, S.C1_ECG + 0.4, 0.8, 0.5)
         if ghost_a > 0:
             thg = np.array([S.c1_theta(x) for x in ts])
             ideal = np.where(np.sin(thg) >= 0, 1.0, -1.0)
             ideal_saw = ((thg / np.pi + 1) % 2) - 1
-            wsg = np.array([S.c1_shape_weights(x)[0] for x in ts])
+            wsg = np.array([S.c1_shape_weights(x)[0] for x in ts]) if t < S.C1_SAW else np.full_like(ts, ws)
             ig = wsg * ideal + (1 - wsg) * ideal_saw
             ctx.set_dash([4, 7])
             stroke_poly(ctx, np.stack([xs, cys - As * ig], 1), WHITE, 1.2, 0.22 * ghost_a)

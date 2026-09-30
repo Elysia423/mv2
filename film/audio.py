@@ -738,9 +738,10 @@ class Score:
         t = np.arange(N) / SR
         # (start time, dB) held until the next key
         keys = [(0.0, -5.0), (S.T_TITLE, 0.0), (S.T_EULER, -2.0), (S.T_PANELS, -2.0), (50.0, 0.0), (62.0, -2.0),
-                (S.T_CHORD, -4.5), (S.T_EAR, -3.0), (S.T_DROP, 0.0), (S.T_WAVES2D, -1.5), (S.T_BEYOND, 0.0),
-                (S.T_GW, -1.0), (S.T_GW + 4.0, 0.0), (S.T_LAPLACE, -2.0), (S.T_HEAT, -5.5), (S.T_MONTAGE, -2.0),
-                (S.T_FINALE, 0.0), (S.T_FINALE + 11.0, -4.0)]
+                (S.T_CHORD, -4.5), (S.T_EAR, -3.0), (S.T_DROP, 0.0), (S.T_WAVES2D, -1.5), (S.T_BEYOND, -3.0),
+                (S.T_GW, -4.0), (S.T_GW + 4.0, -3.0), (S.T_LAPLACE, -3.0), (S.T_HEAT, -6.0), (S.T_MONTAGE, -1.5),
+                (S.T_FINALE, +0.5), (S.T_FINALE + 11.0, -4.0)]
+        # the 'beyond' list sits ~2.5 dB under the finale so the loudest moment is the ending, not the middle
         kt = np.array([k[0] for k in keys])
         kd = np.array([k[1] for k in keys])
         db = kd[np.clip(np.searchsorted(kt, t, side="right") - 1, 0, len(kd) - 1)]
@@ -755,7 +756,8 @@ class Score:
         x = biquad(x, "lowshelf", 140, -2.5)
         x = biquad(x, "peak", 350, -1.5, q=0.9)
         x = biquad(x, "peak", 3000, +4.0, q=0.8)
-        x = biquad(x, "highshelf", 9000, +3.0)
+        x = biquad(x, "peak", 4500, +4.5, q=0.6)      # broad presence lift: phone speakers
+        x = biquad(x, "highshelf", 8000, +5.0)
         import pyloudnorm as pyln
         meter = pyln.Meter(SR)
         cur = meter.integrated_loudness(x.T.astype(np.float64))

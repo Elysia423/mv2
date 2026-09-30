@@ -114,14 +114,14 @@ class Ear(Scene):
     fade_in = 0.3
     fade_out = 0.3
     bloom = 1.0
-    CX, CY = 960.0, 470.0
+    CX, CY = 800.0, 470.0
 
     def prepare(self):
         n = 700
         u = np.linspace(0, 1, n)          # 0 = apex (low), 1 = base (high)
         turns = 2.6
         phi = u * turns * 2 * np.pi
-        r = 40 + 300 * (u ** 0.85)
+        r = 48 + 372 * (u ** 0.85)
         self.u = u
         self.px = self.CX + r * np.cos(-phi + 0.6)
         self.py = self.CY + r * np.sin(-phi + 0.6) * 0.92
@@ -129,7 +129,7 @@ class Ear(Scene):
         dx, dy = np.gradient(self.px), np.gradient(self.py)
         L = np.hypot(dx, dy) + 1e-9
         self.nx, self.ny = dy / L, -dx / L
-        self.width = 10 + 26 * u
+        self.width = 12 + 32 * u
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
@@ -170,12 +170,12 @@ class Ear(Scene):
         draw_text(ctx, "LOW", self.CX + 5, self.CY + 32, size=22, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
                   tracking=0.18)
         ex, ey = self.px[-1], self.py[-1]
-        draw_text(ctx, "高音", ex + 40, ey - 10, size=30, font="sans", weight=500, color=(0.7, 0.5, 1.0),
-                  alpha=0.9 * a, anchor="left")
-        draw_text(ctx, "HIGH", ex + 40, ey + 18, size=22, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
-                  anchor="left", tracking=0.18)
+        draw_text(ctx, "高音", ex - 36, ey - 10, size=30, font="sans", weight=500, color=(0.7, 0.5, 1.0),
+                  alpha=0.9 * a, anchor="right")
+        draw_text(ctx, "HIGH", ex - 36, ey + 18, size=22, font="latin", weight=500, color=WHITE, alpha=0.5 * a,
+                  anchor="right", tracking=0.18)
         # side panel: live spectrum bars
-        xs0, xs1, yb = 1380.0, 1780.0, 700.0
+        xs0, xs1, yb = 1330.0, 1840.0, 760.0
         if a > 0:
             nbar = 64
             bw = (xs1 - xs0) / nbar
@@ -183,14 +183,14 @@ class Ear(Scene):
                 v = float(spec[int(j / nbar * nb)]) ** 1.1
                 col = hsv(0.78 * j / nbar, 0.8, 1.0)
                 set_rgba(ctx, col, 0.85 * a)
-                ctx.rectangle(xs0 + j * bw, yb - 180 * v, bw * 0.7, 180 * v)
+                ctx.rectangle(xs0 + j * bw, yb - 280 * v, bw * 0.7, 280 * v)
                 ctx.fill()
             draw_text(ctx, "频谱 · 实时", xs0, yb + 30, size=28, font="sans", weight=500, color=WHITE, alpha=0.7 * a,
                       anchor="left")
         # small 'ear' label
-        draw_text(ctx, "耳蜗", 240, 300, size=64, font="serif", weight=700, color=WHITE, alpha=0.9 * a, anchor="left",
+        draw_text(ctx, "耳蜗", 120, 200, size=64, font="serif", weight=700, color=WHITE, alpha=0.9 * a, anchor="left",
                   tracking=0.2, glow=8, glow_alpha=0.3)
-        draw_text(ctx, "COCHLEA", 244, 360, size=24, font="latin", weight=500, color=GOLD, alpha=0.7 * a,
+        draw_text(ctx, "COCHLEA", 124, 260, size=24, font="latin", weight=500, color=GOLD, alpha=0.7 * a,
                   anchor="left", tracking=0.18)
 
 
@@ -366,9 +366,9 @@ class Drop3D(Scene):
         u = lt / (self.end - self.start)
         cam = Camera(0.25 - 0.5 * u, 0.5, 14.5 - 1.5 * u, target=(0, 0.2, -6.5), fov=46)
         solid_surface(ctx, cam, X, Y, Z, self.color, edge_alpha=0.75, fill_alpha=0.92, width=1.0)
-        draw_text(ctx, "低频", 360, 900, size=28, font="sans", weight=500, color=WHITE, alpha=0.6)
-        draw_text(ctx, "高频", 1560, 900, size=28, font="sans", weight=500, color=WHITE, alpha=0.6)
-        draw_text(ctx, "LIVE", 1800, 70, size=22, font="latin", weight=600, color=(1, 0.3, 0.35),
+        draw_text(ctx, "低频", 150, 820, size=30, font="sans", weight=600, color=WHITE, alpha=0.8, anchor="left")
+        draw_text(ctx, "高频", 1770, 820, size=30, font="sans", weight=600, color=WHITE, alpha=0.8, anchor="right")
+        draw_text(ctx, "LIVE", 1800, 70, size=26, font="latin", weight=700, color=(1, 0.3, 0.35),
                   alpha=0.8 * (0.6 + 0.4 * math.sin(t * 6)), anchor="right", tracking=0.18)
 
     def effects(self, t, lt):
@@ -428,7 +428,7 @@ class NoiseMP3(Scene):
         stroke_poly(ctx, np.stack([tx, gb - gh * thr], 1), RED, 2.0, 0.9)
         ctx.set_dash([])
         draw_text(ctx, "掩蔽阈值", gx1, gb - gh - 20, size=28, font="sans", weight=500, color=RED, anchor="right")
-        draw_text(ctx, "灰色 = 被掩蔽，听不见 → 删除", (gx0 + gx1) / 2, gb + 40, size=28, font="sans", weight=400,
+        draw_text(ctx, "灰色 = 听不见，删掉", (gx0 + gx1) / 2, gb + 40, size=28, font="sans", weight=400,
                   color=WHITE, alpha=0.75)
         draw_text(ctx, "MP3 / AAC", (gx0 + gx1) / 2, 170, size=34, font="latin", weight=700, color=WHITE, glow=6,
                   glow_alpha=0.3, tracking=0.1)

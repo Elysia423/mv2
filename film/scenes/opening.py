@@ -110,11 +110,12 @@ class ColdOpen(Scene):
         # Lagrange
         a = window(t, 9.0, 11.4, 0.3, 0.4)
         if a > 0:
-            draw_text_chars(ctx, "不可能。", W / 2, H / 2 - 20, t - 9.0, size=96, font="serif", weight=800,
+            # not a quotation: Lagrange, one of the referees, objected to the claim
+            draw_text_chars(ctx, "遭到反对。", W / 2, H / 2 - 20, t - 9.0, size=96, font="serif", weight=800,
                             color=WHITE, alpha=a, tracking=0.02, stagger=0.08, dur=0.3, rise=10, glow=14, glow_alpha=0.6)
-            draw_text(ctx, "—— 拉格朗日  J.-L. LAGRANGE", W / 2 + 180, H / 2 + 80, size=32, font="sans", weight=400,
+            draw_text(ctx, "评审之一：拉格朗日  J.-L. LAGRANGE", W / 2, H / 2 + 80, size=32, font="sans", weight=400,
                       color=(0.85, 0.85, 0.9), alpha=a * smooth((t - 9.6) / 0.4), anchor="center", tracking=0.1)
-            draw_text(ctx, "论文被搁置 15 年，直到 1822 年才以《热的解析理论》出版", W / 2, H / 2 + 150, size=30,
+            draw_text(ctx, "直到 1822 年，《热的解析理论》才出版", W / 2, H / 2 + 150, size=32,
                       font="sans", weight=400, color=GOLD, alpha=0.85 * a * smooth((t - 9.5) / 0.3), tracking=0.06)
 
     def effects(self, t, lt):

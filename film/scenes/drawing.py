@@ -169,7 +169,7 @@ class QuickDraws(Scene):
     fade_out = 0.3
     bloom = 1.0
     M = 400
-    XS = [440, 960, 1480]
+    XS = [380, 960, 1540]
 
     def prepare(self):
         self.Es = [glyph_epicycles(ch, "NotoEmoji.ttf", 300.0, 2048, 0.3) for ch in QUICK]
@@ -179,14 +179,14 @@ class QuickDraws(Scene):
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.6)
-        sc = 0.8
+        sc = 1.3
         cols = [GOLD, MAGENTA, (0.45, 1.0, 0.6)]
         for i, (E, px) in enumerate(zip(self.Es, self.XS)):
             t0 = 0.1 + i * 1.2
             s = clamp((lt - t0) / 1.15)
             if lt < t0:
                 continue
-            py = 440.0
+            py = 400.0
             z = E.curve(self.M)
             k = int(s * E.n)
             X, Y = px + sc * z.real, py + sc * z.imag
@@ -207,10 +207,10 @@ class QuickDraws(Scene):
                 ctx.stroke()
                 glow_dot(ctx, cx[-1], cy[-1], 3.5, WHITE, 1.0, 5)
         a = smooth((lt - 0.4) / 0.5)
-        draw_math(ctx, r"$X_k=\sum_{n=0}^{N-1} x_n\, e^{-2\pi i\,kn/N}$", W / 2, 745, size=46, color=WHITE, alpha=a,
+        draw_math(ctx, r"$X_k=\sum_{n=0}^{N-1} x_n\, e^{-2\pi i\,kn/N}$", W / 2, 760, size=46, color=WHITE, alpha=a,
                   glow=8)
-        draw_text(ctx, "离散傅里叶变换 DFT：每个 X_k 就是一个圆（半径 |X_k|，初相 arg X_k）", W / 2, 822, size=30,
-                  font="sans", weight=400, color=GOLD, alpha=0.85 * smooth((lt - 0.9) / 0.5), tracking=0.04)
+        draw_text(ctx, "每个 X_k 就是一个圆", W / 2, 858, size=32, font="sans", weight=500, color=GOLD,
+                  alpha=0.9 * smooth((lt - 0.9) / 0.5), tracking=0.04)
 
 
 class Ptolemy(Scene):
@@ -230,7 +230,7 @@ class Ptolemy(Scene):
         ctx = cv.ctx
         background(ctx, t, dust=0.8, hue=(0.03, 0.03, 0.08))
         yrs = max(0.0, (lt - 0.2) * 2.6)
-        cam = Camera(-0.35 + 0.12 * lt, 0.62 - 0.03 * lt, 9.6, target=(0.1, 0, 0.35), fov=40)
+        cam = Camera(-0.35 + 0.12 * lt, 0.62 - 0.03 * lt, 7.0, target=(0.1, 0, 0.35), fov=40, center=(W / 2, 470))
         ys = np.linspace(0, yrs, max(2, int(yrs * 120)))
         m, e = self.pos(ys)
         geo = m - e
@@ -264,14 +264,14 @@ class Ptolemy(Scene):
         draw_text(ctx, "地球", px[0], py[0] + 34, size=28, font="sans", weight=500, color=(0.6, 0.8, 1.0))
         draw_text(ctx, "火星", px[2] + 16, py[2] - 18, size=28, font="sans", weight=500, color=ORANGE, anchor="left")
         lx, ly, _ = cam.project(np.array([[self.RM * 0.72, 0, -self.RM * 0.72], [cen.real + 0.72, 0, cen.imag - 0.72]]))
-        draw_text(ctx, "均轮 DEFERENT", lx[0], ly[0] - 14, size=28, font="sans", weight=500, color=CYAN, alpha=0.8)
-        draw_text(ctx, "本轮 EPICYCLE", lx[1], ly[1] - 14, size=28, font="sans", weight=500, color=VIOLET, alpha=0.8)
+        draw_text(ctx, "均轮", lx[0], ly[0] - 14, size=30, font="sans", weight=500, color=CYAN, alpha=0.85)
+        draw_text(ctx, "本轮", lx[1], ly[1] - 14, size=30, font="sans", weight=500, color=VIOLET, alpha=0.85)
         a = smooth((lt - 0.8) / 0.5)
         draw_text(ctx, "逆行", 1700, 200, size=40, font="serif", weight=700, color=RED, alpha=a, anchor="right",
                   glow=8, glow_alpha=0.4)
         draw_text(ctx, "RETROGRADE", 1700, 245, size=22, font="latin", weight=600, color=WHITE, alpha=0.6 * a,
                   anchor="right", tracking=0.18)
-        draw_text(ctx, "《天文学大成》· 约公元 150 年", 1700, 285, size=28, font="sans", weight=400, color=GOLD,
+        draw_text(ctx, "约公元 150 年", 1700, 285, size=30, font="sans", weight=400, color=GOLD,
                   alpha=0.8 * a, anchor="right")
 
 

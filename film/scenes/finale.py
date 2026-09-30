@@ -77,10 +77,6 @@ class Heat3D(Scene):
                   color=WHITE, alpha=smooth((lt - 0.3) / 0.5), glow=6)
         draw_math(ctx, r"$T(x,t)=\sum_n b_n\,e^{-\alpha n^2\pi^2 t}\,\sin n\pi x$", 1560, 280, size=32,
                   color=GOLD, alpha=smooth((lt - 1.2) / 0.5), glow=6)
-        draw_text(ctx, "1807", 110, 130, size=66, font="latin", weight=200, color=WHITE, alpha=smooth(lt / 0.5),
-                  anchor="left", glow=8, glow_alpha=0.3)
-        draw_text(ctx, "热方程 · HEAT EQUATION", 114, 190, size=28, font="sans", weight=500, color=GOLD,
-                  alpha=0.9 * smooth(lt / 0.5), anchor="left", tracking=0.1)
 
 
 class Montage(Scene):

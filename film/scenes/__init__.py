@@ -115,21 +115,21 @@ CAPTIONS = [
     (124.3, 129.8, "JPEG：只保留低频波纹，文件小十倍", "JPEG keeps the low-frequency patterns: 10x smaller"),
     # beyond (4 s each)
     (134.3, 137.8, "氦，先在太阳光谱中被发现", "Helium was found in the Sun's spectrum first"),
-    (138.3, 141.8, "衍射图，就是孔径的傅里叶变换", "A diffraction pattern is the aperture's Fourier transform"),
+    (138.3, 141.8, "星芒，来自镜面的傅里叶变换", "Diffraction spikes come from the mirror's Fourier transform"),
     (142.3, 145.8, "衍射图里的“X”，暴露了双螺旋", "The X in the pattern revealed the double helix"),
     (146.3, 149.8, "MRI 测的是频率，逆变换还原出大脑", "MRI measures frequencies; the inverse transform shows the brain"),
-    (150.3, 153.8, "真实数据：两个黑洞合并的“啁啾”", "Real data: the chirp of two merging black holes"),
+    (150.3, 153.8, "真实数据：两个黑洞合并的“啁啾”", "Real data: the chirp of two merging black holes (sound illustrative)"),
     (154.3, 157.8, "球面上的傅里叶：原子轨道、天气预报", "Fourier on a sphere: atomic orbitals, weather models"),
     (158.3, 161.8, "潮汐：几十个天文周期的叠加", "Tides: dozens of astronomical cycles added up"),
-    (162.3, 165.8, "上千个子载波并行，互不干扰", "Thousands of subcarriers side by side"),
+    (162.3, 165.8, "成百上千个子载波并行，互不干扰", "Hundreds to thousands of subcarriers side by side"),
     (166.3, 169.8, "位置越确定，动量越模糊", "The sharper the position, the blurrier the momentum"),
     (170.3, 173.8, "大模型用正弦波标记词的位置", "Language models tag word positions with sine waves"),
     (174.3, 177.8, "FFT：N² 变成 N log N，快了五万倍", "FFT: N² becomes N log N, 50,000x faster"),
     # the family
-    (179.0, 181.3, "拉普拉斯变换：把频率推广到复平面", "Laplace: frequency extended to the complex plane"),
+    (179.0, 181.3, "拉普拉斯变换：在频率之外，再加上衰减", "Laplace: frequency, plus decay"),
     (181.5, 183.8, "沿虚轴切开，就是傅里叶变换", "Slice the imaginary axis: the Fourier transform"),
     (184.3, 186.9, "短时傅里叶：窗口固定", "Short-time Fourier: one fixed window"),
-    (187.1, 189.8, "小波：高频看清时刻，低频看清音高", "Wavelets: timing for highs, pitch for lows"),
+    (187.1, 189.8, "小波：窗口随频率伸缩，啁啾清晰可见", "Wavelets: the window scales with frequency; the chirp stays sharp"),
     # heat & montage
     (191.0, 193.8, "一切的起点：热方程", "Where it began: the heat equation"),
     (194.0, 197.8, "高频最先消失——傅里叶由此发明了级数", "The highs fade first; Fourier's series was born here"),
@@ -144,7 +144,9 @@ CHAPTERS = [
     (S.T_PANELS + 0.2, S.T_CHORD - 0.2, "02", "以 圆 作 画", "DRAWING WITH CIRCLES"),
     (S.T_CHORD + 0.2, S.T_WAVES2D - 0.2, "03", "声 音", "SOUND"),
     (S.T_WAVES2D + 0.2, S.T_BEYOND - 0.2, "04", "图 像", "IMAGES"),
-    (S.T_LAPLACE + 0.2, S.T_HEAT - 0.2, "05", "变 换 家 族", "THE FAMILY"),
+    # 05 'and beyond' carries its number on its own title card (the shots under it have their own titles)
+    (S.T_LAPLACE + 0.2, S.T_HEAT - 0.2, "06", "变 换 家 族", "THE FAMILY"),
+    (S.T_HEAT + 0.2, S.T_MONTAGE - 0.2, "07", "起 源", "1807 · THE HEAT EQUATION"),
 ]
 
 

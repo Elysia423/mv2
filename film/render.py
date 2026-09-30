@@ -15,8 +15,9 @@ import time
 import numpy as np
 
 from . import story as S
-from .core import FPS, H, W, Canvas, postprocess
-from .data import BUILD
+from . import core
+from .core import H, W, Canvas, postprocess
+from .data import BUILD, SPEC_RATE
 
 
 _SCENES = None
@@ -45,8 +46,9 @@ def _prev_scene(sc):
 
 def scene_array(sc, t, scale, clamp_t=None):
     """Render one scene to float32 HxWx3 in 0..255, averaging sub-frames for motion blur."""
-    n = max(1, int(getattr(sc, "blur", 1)))
-    shutter = 0.5 / FPS  # 180-degree shutter
+    # BLUR counts are tuned for 30 fps; at higher rates each frame covers less motion and needs fewer samples
+    n = max(1, int(round(getattr(sc, "blur", 1) * 30 / core.FPS)))
+    shutter = 0.5 / core.FPS  # 180-degree shutter
     offs = [0.0] if n == 1 else [((k + 0.5) / n - 0.5) * shutter for k in range(n)]
     acc = None
     for o in offs:
@@ -134,7 +136,7 @@ def transition_frame(prev, sc, t, scale):
 
 def render_frame(fi, scale=1.0):
     _setup()
-    t = fi / FPS
+    t = fi / core.FPS
     fx = {"flash": 0.0, "chroma": 0.0, "shake": 0.0, "fade": 1.0}
     acc = None
     bloom_amt = 0.0
@@ -189,7 +191,7 @@ def cmd_audio():
     t0 = time.time()
     out, _ = audio.render_soundtrack(os.path.join(BUILD, "soundtrack.wav"))
     print(f"soundtrack: {time.time() - t0:.1f}s")
-    spec = audio.spectrum_frames(out, FPS)
+    spec = audio.spectrum_frames(out, SPEC_RATE)
     np.save(os.path.join(BUILD, "spectrum.npy"), spec)
     print(f"spectrum: {spec.shape}")
 
@@ -197,7 +199,7 @@ def cmd_audio():
 def cmd_still(times, scale):
     import cv2
     for tt in times:
-        fi = int(round(float(tt) * FPS))
+        fi = int(round(float(tt) * core.FPS))
         t0 = time.time()
         img = render_frame(fi, scale)
         p = os.path.join(BUILD, f"still_{float(tt):07.2f}.png")
@@ -211,6 +213,7 @@ def cmd_video(scale, t_from, t_to, out, workers, crf, preset="medium", abr="256k
     _setup()
     ff = imageio_ffmpeg.get_ffmpeg_exe()
     w, h = int(round(W * scale)), int(round(H * scale))
+    FPS = core.FPS
     f0, f1 = int(round(t_from * FPS)), int(round(t_to * FPS))
     wav = os.environ.get("FILM_WAV", os.path.join(BUILD, "soundtrack.wav"))
     cmd = [ff, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "bgra", "-s", f"{w}x{h}", "-r", str(FPS),
@@ -248,7 +251,10 @@ def main():
     ap.add_argument("--crf", type=int, default=20)
     ap.add_argument("--preset", default="medium")
     ap.add_argument("--abr", default="256k", help="AAC audio bitrate")
+    ap.add_argument("--fps", type=int, default=None, help="frame rate (default 60, or $FILM_FPS)")
     a = ap.parse_args()
+    if a.fps:
+        core.FPS = a.fps
     if a.cmd == "audio":
         cmd_audio()
     elif a.cmd == "still":

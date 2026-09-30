@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 W, H = 1920, 1080
-FPS = 30
+FPS = int(os.environ.get("FILM_FPS", "60"))  # video frame rate; `render video --fps` overrides it
 BPM = 120
 RS = 1.0  # render scale (1 = 1080p, 2 = 4K); text, maths and glow are rasterised at this density
 BEAT = 60.0 / BPM

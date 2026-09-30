@@ -1,12 +1,12 @@
 """Beyond Fourier: the Laplace transform over the s-plane, and wavelets vs. the short-time Fourier transform."""
 import math
 
-import cairo
 import numpy as np
 
 from .. import story as S
-from ..core import (CYAN, GOLD, H, MAGENTA, RED, VIOLET, W, WHITE, background, clamp, draw_math, draw_text, ease_out,
-                    glow_dot, hsv, lerp, mix, polyline, rounded_rect, set_rgba, smooth, smoother, stroke_poly, window)
+from ..core import (CYAN, GOLD, H, LUT_FIRE, LUT_ICE, MAGENTA, RED, VIOLET, W, WHITE, apply_lut, background, clamp,
+                    draw_math, draw_text, ease_out, mix, paint_image, polyline, rounded_rect, set_rgba, smooth,
+                    smoother, stroke_poly, surface_from_array)
 from ..three import Camera, axis3, line3, solid_surface
 from .base import Scene
 
@@ -45,7 +45,7 @@ class Laplace3D(Scene):
         ctx = cv.ctx
         background(ctx, t, dust=0.4)
         grow = ease_out(lt / 1.0, 3)
-        cam = Camera(0.55 - 0.25 * lt / 6, 0.5, 14.0, target=(0, 0.8, 0.2), fov=40)
+        cam = Camera(0.55 - 0.25 * lt / 6, 0.5, 14.0, target=(0, 0.8, 0.2), fov=40, center=(W / 2 - 190, H / 2 + 10))
         solid_surface(ctx, cam, self.X, self.Y * grow, self.Z, self.color, edge_alpha=0.6, fill_alpha=0.88, width=0.8)
         # poles
         for p in self.poles:
@@ -53,6 +53,8 @@ class Laplace3D(Scene):
             line3(ctx, cam, np.array([[x, 0, z], [x, 2.5 * grow, z]]), RED, 2.5, 0.9)
             px, py, _ = cam.project(np.array([[x, 2.6 * grow, z]]))
             draw_text(ctx, "×", px[0], py[0], size=34, font="latin", weight=600, color=RED)
+        draw_text(ctx, "极点", px[0] + 22, py[0] - 4, size=30, font="sans", weight=600, color=RED,
+                  alpha=smooth((lt - 1.0) / 0.4), anchor="left")
         # the imaginary-axis slice = Fourier transform (frequency response)
         sl = smooth((lt - 2.8) / 0.8)
         if sl > 0:
@@ -76,90 +78,139 @@ class Laplace3D(Scene):
         draw_text(ctx, "σ 衰减", lx[1], ly[1] + 24, size=30, font="sans", weight=500, color=WHITE, alpha=0.8)
         draw_math(ctx, r"$F(s)=\int_0^{\infty} f(t)\,e^{-st}\,dt,\quad s=\sigma+i\omega$", W / 2, 140, size=38,
                   color=WHITE, alpha=smooth((lt - 0.3) / 0.5), glow=6)
-        a = smooth((lt - 3.2) / 0.5)
-        draw_text(ctx, "σ = 0 的切片 = 傅里叶变换", 1500, 300, size=34, font="sans", weight=600, color=GOLD, alpha=a,
-                  glow=6, glow_alpha=0.3)
-        draw_text(ctx, "极点 ×：在左半平面 → 系统稳定", 1500, 345, size=28, font="sans", weight=400, color=RED,
-                  alpha=0.9 * smooth((lt - 1.2) / 0.5))
+        self.absorber(ctx, lt)
+
+    def absorber(self, ctx, lt):
+        """A shock absorber released at REL: its bounce e^(σt)·cos(ωt) is set by the two poles."""
+        a = smooth((lt - 0.9) / 0.4)
+        if a <= 0:
+            return
+        sig = -self.ZETA * self.W0
+        om = self.W0 * math.sqrt(1 - self.ZETA ** 2)
+        k = 2.2                      # screen seconds -> model time
+        REL = 1.4
+
+        def u(tau):
+            return np.where(tau < 0, 1.0, np.exp(sig * k * np.maximum(tau, 0)) * np.cos(om * k * np.maximum(tau, 0)))
+
+        cx, top, rest, amp = 1590.0, 455.0, 640.0, 70.0
+        draw_text(ctx, "减震器", cx, 405, size=34, font="sans", weight=600, color=WHITE, alpha=a)
+        set_rgba(ctx, WHITE, 0.6 * a)
+        ctx.set_line_width(3)
+        ctx.move_to(cx - 60, top)
+        ctx.line_to(cx + 60, top)
+        ctx.stroke()
+        y = rest + amp * float(u(lt - REL))
+        # spring: zig-zag from the ceiling to the block
+        n = 14
+        ys = np.linspace(top, y - 28, n + 1)
+        xs = cx + np.array([0] + [(-1) ** i * 18 for i in range(1, n)] + [0])
+        polyline(ctx, np.stack([xs, ys], 1))
+        set_rgba(ctx, CYAN, 0.9 * a)
+        ctx.set_line_width(2.5)
+        ctx.stroke()
+        rounded_rect(ctx, cx - 42, y - 28, 84, 56, 8)
+        ctx.set_source_rgba(0.55, 0.25, 0.9, 0.85 * a)
+        ctx.fill()
+        # its trace, drawn as it happens, inside the decay envelope e^(σt)
+        x0, x1, span = 1670.0, 1870.0, 3.6
+        tau = np.linspace(0, max(0.0, min(lt - REL, span)), 300)
+        env = np.linspace(0, span, 200)
+        e = np.exp(sig * k * env)
+        ctx.set_dash([5, 6])
+        for sgn in (1, -1):
+            polyline(ctx, np.stack([x0 + env / span * (x1 - x0), rest + sgn * amp * e], 1))
+            set_rgba(ctx, GOLD, 0.55 * a)
+            ctx.set_line_width(1.5)
+            ctx.stroke()
+        ctx.set_dash([])
+        if len(tau) > 1 and lt > REL:
+            stroke_poly(ctx, np.stack([x0 + tau / span * (x1 - x0), rest + amp * u(tau)], 1), VIOLET, 2.5, 0.95 * a,
+                        glow=0.6)
+        draw_math(ctx, r"$e^{\sigma t}$", x1 - 20, rest - amp - 26, size=30, color=GOLD, alpha=a)
 
 
 class Wavelet(Scene):
-    """Time-frequency tilings: the STFT's fixed boxes vs. the wavelet's multi-resolution boxes."""
+    """Short-time Fourier vs wavelets on the same real signal: the GW150914 chirp (LIGO Hanford, whitened).
+
+    A fixed 125 ms window smears the fast, rising chirp; Morlet wavelets (short at high frequency, long at low
+    frequency) keep it sharp.
+    """
     start, end = S.T_WAVELET, S.T_HEAT
     fade_in = 0.3
     fade_out = 0.3
     bloom = 0.9
-    T_TONE = 0.12    # the low tone's frequency (fraction of the band)
-    T_CLICK = 0.62   # the click's time
+    WIN = (-0.30, 0.06)
+    NPER = 512      # 125 ms at 4096 Hz
 
-    def energy(self, t0, t1, f0, f1):
-        """Energy density of the test signal (a steady low tone + a sharp click) inside a time-frequency box.
+    def prepare(self):
+        import os
+        from scipy.signal import stft
+        from ..core import ROOT
+        d = np.load(os.path.join(ROOT, "assets", "ligo", "gw150914.npz"))
+        t, x, fr = d["t"], d["h"], d["freqs"]
+        sel = (t >= self.WIN[0]) & (t <= self.WIN[1])
+        ff, tt, Z = stft(x, 4096, nperseg=self.NPER, noverlap=self.NPER - 4, boundary="even")
+        M = np.abs(Z) ** 2
+        Mf = np.array([np.interp(fr, ff, M[:, j]) for j in range(M.shape[1])]).T   # onto the log-frequency grid
+        st = np.array([np.interp(t[sel], t[0] + tt, row) for row in Mf])
+        self.maps = [self._norm(st), self._norm(d["tf"][:, sel])]
 
-        A steady tone spreads its energy over time, so its density is 1/df; a click spreads over frequency, so
-        its density is 1/dt. Normalised so the best-matched box is 1.
-        """
-        e = 0.0
-        if f0 <= self.T_TONE < f1:
-            e += (1 / (f1 - f0)) / 16
-        if t0 <= self.T_CLICK < t1:
-            e += (1 / (t1 - t0)) / 16
-        return min(1.0, e)
+    @staticmethod
+    def _norm(A):
+        return np.clip(A / np.percentile(A, 99.8), 0, 1) ** 0.7
 
-    def panel(self, ctx, x0, y0, w, h, boxes, a, col):
-        for (t0, t1, f0, f1) in boxes:
-            e = self.energy(t0, t1, f0, f1)
-            X0, X1 = x0 + t0 * w, x0 + t1 * w
-            Y0, Y1 = y0 + h - f1 * h, y0 + h - f0 * h
-            ctx.rectangle(X0 + 1, Y0 + 1, X1 - X0 - 2, Y1 - Y0 - 2)
-            c = mix((0.05, 0.08, 0.2), col, e)
-            ctx.set_source_rgba(c[0], c[1], c[2], a * (0.35 + 0.65 * e))
-            ctx.fill_preserve()
-            set_rgba(ctx, col, 0.5 * a)
-            ctx.set_line_width(1)
+    def panel(self, ctx, k, x0, y0, w, h, rev, a, col, lut):
+        m = self.maps[k][::-1].copy()
+        m[:, int(rev * m.shape[1]):] = 0
+        paint_image(ctx, surface_from_array(apply_lut(m, lut)), x0, y0, w, h, a, anchor="topleft")
+        set_rgba(ctx, col, 0.6 * a)
+        ctx.set_line_width(1.5)
+        ctx.rectangle(x0, y0, w, h)
+        ctx.stroke()
+        if 0 < rev < 1:
+            xx = x0 + rev * w
+            set_rgba(ctx, WHITE, 0.7 * a)
+            ctx.set_line_width(2)
+            ctx.move_to(xx, y0)
+            ctx.line_to(xx, y0 + h)
             ctx.stroke()
-        draw_text(ctx, "时间 →", x0 + w, y0 + h + 28, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
-                  anchor="right")
-        draw_text(ctx, "频率 ↑", x0 - 12, y0 + 12, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
-                  anchor="right")
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.4)
-        # basis functions on top
+        # basis functions on top: fixed-width windows vs. wavelets that shrink as the frequency rises
         xs = np.linspace(0, 1, 400)
-        for k, (x0, title, sub, col) in enumerate([(160.0, "短时傅里叶 STFT", "窗口宽度固定", CYAN),
-                                                    (1010.0, "小波 WAVELET", "高频窄、低频宽", GOLD)]):
+        for k, (x0, title, col) in enumerate([(160.0, "短时傅里叶 STFT", CYAN), (1010.0, "小波 WAVELET", GOLD)]):
             a = smooth((lt - 0.2 - 0.4 * k) / 0.4)
-            draw_text(ctx, title, x0, 150, size=36, font="sans", weight=700, color=col, alpha=a, anchor="left")
-            draw_text(ctx, sub, x0, 192, size=28, font="sans", weight=400, color=WHITE, alpha=0.7 * a, anchor="left")
+            draw_text(ctx, title, x0, 168, size=38, font="sans", weight=700, color=col, alpha=a, anchor="left")
             for j, (f, width) in enumerate([(3, 0.28), (8, 0.28 if k == 0 else 0.11), (20, 0.28 if k == 0 else 0.045)]):
                 cx = 0.18 + 0.32 * j
                 env = np.exp(-((xs - cx) / (width / 2.5)) ** 2)
                 y = env * np.cos(2 * np.pi * f * (xs - cx) / (0.3 if k == 0 else width * 1.2))
-                pts = np.stack([x0 + xs * 750, 280 - 45 * y], 1)
-                stroke_poly(ctx, pts, col, 1.8, 0.9 * a)
-        # tilings
-        stft = []
-        for i in range(8):
-            for j in range(8):
-                stft.append((i / 8, (i + 1) / 8, j / 8, (j + 1) / 8))
-        wav = []
-        bands = [(0.0, 0.0625, 1), (0.0625, 0.125, 2), (0.125, 0.25, 4), (0.25, 0.5, 8), (0.5, 1.0, 16)]
-        for f0, f1, n in bands:
-            for i in range(n):
-                wav.append((i / n, (i + 1) / n, f0, f1))
-        a1 = smooth((lt - 0.6) / 0.5)
-        a2 = smooth((lt - 1.2) / 0.5)
-        self.panel(ctx, 160.0, 380.0, 750.0, 450.0, stft, a1, CYAN)
-        self.panel(ctx, 1010.0, 380.0, 750.0, 450.0, wav, a2, GOLD)
-        c = smooth((lt - 2.2) / 0.5)
-        if c > 0:
-            for x0 in (160.0, 1010.0):
-                xx = x0 + self.T_CLICK * 750
-                draw_text(ctx, "咔哒声", xx, 360, size=28, font="sans", weight=500, color=RED, alpha=c)
-                yy = 380 + 450 - self.T_TONE * 450
-                draw_text(ctx, "低音", x0 + 760, yy, size=28, font="sans", weight=500, color=RED, alpha=c,
-                          anchor="left")
+                stroke_poly(ctx, np.stack([x0 + xs * 750, 262 - 45 * y], 1), col, 1.8, 0.9 * a)
+        # the same real signal through both
+        a = smooth((lt - 0.5) / 0.4)
+        rev = smoother((lt - 0.7) / 2.2)
+        self.panel(ctx, 0, 160.0, 380.0, 750.0, 450.0, rev, a, CYAN, LUT_ICE)
+        self.panel(ctx, 1, 1010.0, 380.0, 750.0, 450.0, rev, a, GOLD, LUT_FIRE)
+        draw_text(ctx, "引力波数据", W / 2, 346, size=30, font="sans", weight=600, color=WHITE, alpha=0.85 * a)
+        # the STFT's fixed window, to scale
+        wpx = self.NPER / 4096 / (self.WIN[1] - self.WIN[0]) * 750
+        set_rgba(ctx, CYAN, 0.8 * a)
+        ctx.set_line_width(2)
+        for xx in (180.0, 180.0 + wpx):
+            ctx.move_to(xx, 846)
+            ctx.line_to(xx, 862)
+        ctx.move_to(180.0, 854)
+        ctx.line_to(180.0 + wpx, 854)
+        ctx.stroke()
+        draw_text(ctx, "125 ms", 180.0 + wpx + 12, 854, size=28, font="latin", weight=600, color=CYAN, alpha=a,
+                  anchor="left")
+        draw_text(ctx, "时间 →", 1760, 858, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
+                  anchor="right")
+        draw_text(ctx, "频率 ↑", 148, 392, size=28, font="sans", weight=500, color=WHITE, alpha=0.6 * a,
+                  anchor="right")
 
 
 def family_scenes():

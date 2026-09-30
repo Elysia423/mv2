@@ -24,12 +24,8 @@ def vignette_title(ctx, lt, zh, en, sub=None, x=110, y=150, layout="tl"):
             draw_text(ctx, ch, 110, 250 + i * 84, size=72, font="serif", weight=800, color=WHITE, alpha=ai,
                       glow=10, glow_alpha=0.35)
         yy = 250 + len(zh) * 84 + 10
-        draw_text(ctx, en, 110, yy, size=22, font="latin", weight=600, color=GOLD, alpha=0.85 * smooth((lt - 0.2) / 0.5),
-                  tracking=0.1)
-        if sub:
-            for i, ch in enumerate(sub):
-                draw_text(ctx, ch, 190, 262 + i * 38, size=30, font="sans", weight=400, color=(0.85, 0.9, 1.0),
-                          alpha=0.8 * smooth((lt - 0.5 - 0.02 * i) / 0.4))
+        draw_text(ctx, en, 74, yy, size=24, font="latin", weight=600, color=GOLD, alpha=0.85 * smooth((lt - 0.2) / 0.5),
+                  tracking=0.1, anchor="left")
         return
     anchor = {"tl": "left", "tr": "right", "tc": "center"}[layout]
     if layout == "tr":
@@ -84,13 +80,15 @@ class BeyondHeader(Scene):
         ctx.set_source(g)
         ctx.paint()
         s_ = 1.25 - 0.25 * ease_out_expo(lt / 1.2)
+        draw_text(ctx, "05", W / 2, H / 2 - 190, size=64, font="latin", weight=200, color=GOLD,
+                  alpha=0.9 * smooth((lt - 0.2) / 0.4), tracking=0.05)
         draw_text(ctx, "不止于此", W / 2, H / 2 - 30, size=150, font="serif", weight=900, color=WHITE,
                   alpha=smooth(lt / 0.2), tracking=0.18, glow=18, glow_alpha=0.5, scale=s_)
         draw_text(ctx, "AND  BEYOND", W / 2, H / 2 + 90, size=32, font="latin", weight=300, color=GOLD, alpha=0.9,
                   tracking=0.9, reveal=ease_out((lt - 0.6) / 1.2, 2))
         draw_text_chars(ctx, "从星辰到基因，从大脑到人工智能", W / 2, H / 2 + 170, lt - 1.3, size=36, font="sans",
                         weight=400, color=(0.9, 0.93, 1.0), alpha=0.95, tracking=0.2, stagger=0.05)
-        draw_text(ctx, "哈勃极深场 · NASA / ESA（真实照片）", W - 60, H - 170, size=24, font="sans", weight=400,
+        draw_text(ctx, "哈勃极深场 · NASA / ESA", W - 60, H - 170, size=24, font="sans", weight=400,
                   color=WHITE, alpha=0.6 * smooth((lt - 1.0) / 0.5), anchor="right")
 
     def effects(self, t, lt):
@@ -132,8 +130,7 @@ SOLAR_LINES = [
     (616.22, 0.50, 0.02), (644.98, 0.40, 0.02), (671.8, 0.30, 0.02),
 ]
 TELLURIC = [(686.7, 688.4, 0.9), (627.6, 629.0, 0.55), (694.0, 697.0, 0.35)]
-LINE_LABELS = [(656.28, "Hα"), (589.29, "Na D"), (517.3, "Mg b"), (486.13, "Hβ"), (527.0, "Fe"), (430.8, "G"),
-               (434.05, "Hγ"), (422.67, "Ca")]
+LINE_LABELS = [(656.28, "Hα"), (589.29, "Na"), (486.13, "Hβ"), (430.8, "Fe")]
 
 
 def solar_spectrum(wl, seed=4):
@@ -240,7 +237,7 @@ class Prism(Vignette):
                 r = int((self.WL1 - wl) // self.span)
                 x = px0 + (wl - (self.WL1 - (r + 1) * self.span)) / self.span * (px1 - px0)
                 y = py0 + r * (rh + gap)
-                draw_text(ctx, lab, x, y - 13, size=24, font="sans", weight=700, color=WHITE, alpha=0.9 * la)
+                draw_text(ctx, lab, x, y - 15, size=28, font="sans", weight=700, color=WHITE, alpha=0.9 * la)
         # helium: the yellow emission line seen in the 1868 eclipse
         ah = smooth((lt - 2.2) / 0.3)
         if ah > 0:
@@ -258,9 +255,9 @@ class Prism(Vignette):
             set_rgba(ctx, (1.0, 0.95, 0.6), 0.8 * ah)
             ctx.set_line_width(1.5)
             ctx.stroke()
-            draw_text(ctx, "氦 He · 1868 年日食中首次观测到", x + 14, yb + 16, size=30, font="sans", weight=700,
+            draw_text(ctx, "氦 He · 1868", x + 14, yb + 16, size=30, font="sans", weight=700,
                       color=(1.0, 0.95, 0.6), alpha=ah, anchor="left", glow=6, glow_alpha=0.5)
-        vignette_title(ctx, lt, "光谱", "SPECTRUM", "棱镜：把阳光按频率展开", y=130)
+        vignette_title(ctx, lt, "光谱", "SPECTRUM", y=130)
 
 
 # ---------------------------------------------------------------------- 2. DNA
@@ -346,11 +343,8 @@ class DNA(Vignette):
             surf = surface_from_array(vis)
             paint_image(ctx, surf, 1400, 520, 440, 440, 1.0)
             circle(ctx, 1400, 520, 222, (0.8, 0.7, 0.5), 0.35 * rev, width=1.5)
-            draw_text(ctx, "Photo 51 · 1952", 1400, 780, size=30, font="latin", weight=500, color=GOLD, alpha=rev,
-                      tracking=0.1)
-            draw_text(ctx, "罗莎琳德·富兰克林", 1400, 812, size=28, font="sans", weight=400, color=WHITE,
-                      alpha=0.6 * rev)
-        vignette_title(ctx, lt, "双螺旋", "DNA · PHOTO 51 · 1952", "衍射图记录分子的傅里叶变换", layout="v")
+            draw_text(ctx, "富兰克林 · 1952", 1400, 790, size=32, font="sans", weight=500, color=GOLD, alpha=rev)
+        vignette_title(ctx, lt, "双螺旋", "DNA · PHOTO 51", layout="v")
 
 
 # ---------------------------------------------------------------------- 3. MRI
@@ -400,7 +394,7 @@ class MRI(Vignette):
         draw_math(ctx, r"$\mathcal{F}^{-1}$", (kx + ix) / 2, y - 40, size=36, color=GOLD, alpha=a)
         draw_text(ctx, "k 空间（频率）", kx, y + s / 2 + 40, size=30, font="sans", weight=500, color=CYAN, alpha=a)
         draw_text(ctx, "大脑图像", ix, y + s / 2 + 40, size=30, font="sans", weight=500, color=WHITE, alpha=a)
-        vignette_title(ctx, lt, "核磁共振", "MRI · k-SPACE", "扫描仪测量的，其实是频率", y=110, layout="tc")
+        vignette_title(ctx, lt, "核磁共振", "MRI · k-SPACE", y=110, layout="tc")
 
 
 # ---------------------------------------------------------------------- 4. gravitational waves
@@ -469,7 +463,7 @@ class GW(Vignette):
                 r = (ripple_t - k * 0.18) * 520
                 if r > 0:
                     circle(ctx, cx, cy, r, mix(WHITE, CYAN, k / 3), max(0, 0.7 - ripple_t * 0.4), width=3)
-        draw_text(ctx, "示意动画", cx, 860, size=28, font="sans", weight=400, color=WHITE, alpha=0.5)
+        draw_text(ctx, "动画、声音为示意", cx, 860, size=28, font="sans", weight=400, color=WHITE, alpha=0.6)
         # ---- real strain, revealed in slow motion
         tr = self.real_t(t)
         n = int(np.searchsorted(self.rt, tr))
@@ -479,10 +473,8 @@ class GW(Vignette):
             stroke_poly(ctx, np.stack([X[:n], wy - 95 * self.rl[:n]], 1), ORANGE, 1.8, 0.8)
             stroke_poly(ctx, np.stack([X[:n], wy - 95 * self.rh[:n]], 1), CYAN, 2.2, 0.95, glow=0.6)
             glow_dot(ctx, X[n - 1], wy - 95 * self.rh[n - 1], 4, WHITE, 1.0, 4)
-        draw_text(ctx, "汉福德 H1", px0, wy - 140, size=28, font="sans", weight=500, color=CYAN, anchor="left")
-        draw_text(ctx, "利文斯顿 L1", px0 + 200, wy - 140, size=28, font="sans", weight=500, color=ORANGE, anchor="left")
-        draw_text(ctx, "真实数据 · 已白化", px1, wy - 140, size=28, font="sans", weight=400, color=WHITE, alpha=0.7,
-                  anchor="right")
+        draw_text(ctx, "H1", px0, wy - 140, size=30, font="latin", weight=600, color=CYAN, anchor="left")
+        draw_text(ctx, "L1", px0 + 80, wy - 140, size=30, font="latin", weight=600, color=ORANGE, anchor="left")
         # ---- wavelet time-frequency map of the real data
         fy0, fy1 = 520.0, 820.0
         m = self.tf.copy()
@@ -493,7 +485,7 @@ class GW(Vignette):
         ctx.set_line_width(1)
         ctx.rectangle(px0, fy0, px1 - px0, fy1 - fy0)
         ctx.stroke()
-        draw_text(ctx, "小波时频图：频率 35 → 250 Hz", px0, fy1 + 34, size=28, font="sans", weight=500, color=ORANGE,
+        draw_text(ctx, "35 → 250 Hz", px0, fy1 + 34, size=30, font="latin", weight=600, color=ORANGE,
                   anchor="left")
         vignette_title(ctx, lt, "引力波", "GW150914 · LIGO", None, y=150)
 
@@ -539,11 +531,26 @@ class WiFi(Vignette):
         draw_text(ctx, "频率 →", x1 + 40, base + 30, size=28, font="sans", weight=500, color=WHITE, alpha=0.6,
                   anchor="right")
         a = smooth((lt - 1.1) / 0.5)
-        draw_text(ctx, "每一种颜色，都是一路独立的数据", 960, base - 420, size=32, font="sans", weight=400,
-                  color=(0.85, 0.9, 1.0), alpha=0.85 * a)
-        draw_text(ctx, "峰值处，其余载波恰好为零 —— 正交", 960, base + 60, size=28, font="sans", weight=400,
-                  color=GOLD, alpha=0.8 * smooth((lt - 1.7) / 0.5))
-        vignette_title(ctx, lt, "Wi-Fi · 5G", "OFDM", "正交频分复用", y=150, layout="tr")
+        draw_text(ctx, "每种颜色 = 一路数据", x0 - 40, base - 450, size=34, font="sans", weight=500,
+                  color=(0.85, 0.9, 1.0), alpha=0.9 * a, anchor="left")
+        # orthogonality: at one carrier's peak every other carrier passes through zero
+        o = smooth((lt - 1.7) / 0.5)
+        if o > 0:
+            k0 = 11
+            fc = x0 + (k0 + 2) * df
+            yp = base - 330 * self.syms[k0, sym_i % 40]
+            ctx.set_dash([5, 6])
+            set_rgba(ctx, WHITE, 0.7 * o)
+            ctx.set_line_width(1.5)
+            ctx.move_to(fc, base + 40)
+            ctx.line_to(fc, base - 370)
+            ctx.stroke()
+            ctx.set_dash([])
+            glow_dot(ctx, fc, yp, 7, WHITE, o, 8)
+            glow_dot(ctx, fc, base, 6, GOLD, o, 6)
+            draw_text(ctx, "其余载波为零", fc, base - 400, size=30, font="sans", weight=600, color=GOLD,
+                      alpha=o, glow=8, glow_alpha=0.6)
+        vignette_title(ctx, lt, "Wi-Fi · 5G", "OFDM", y=150, layout="tr")
 
 
 # ---------------------------------------------------------------------- 6. quantum
@@ -593,12 +600,10 @@ class Quantum(Vignette):
             draw_text(ctx, lab, cx, base + 72, size=32, font="sans", weight=500, color=col, alpha=a)
         draw_math(ctx, r"$\Delta x \cdot \Delta p \geq \frac{\hbar}{2}$", 960, 330, size=48, color=WHITE,
                   alpha=smooth((lt - 0.5) / 0.5), glow=8)
-        draw_text(ctx, "量子计算：Shor 算法的核心，正是“量子傅里叶变换”", 960, 400, size=30, font="sans",
-                  weight=400, color=GOLD, alpha=0.85 * smooth((lt - 1.4) / 0.5))
         arrow(ctx, 890, 520, 1030, 520, GOLD, 0.8 * a, 2, 14)
         arrow(ctx, 1030, 545, 890, 545, GOLD, 0.8 * a, 2, 14)
         draw_math(ctx, r"$\mathcal{F}$", 960, 480, size=34, color=GOLD, alpha=a)
-        vignette_title(ctx, lt, "量子", "QUANTUM", "不确定性原理", layout="v")
+        vignette_title(ctx, lt, "量子", "QUANTUM", layout="v")
 
 
 # ---------------------------------------------------------------------- 7. AI positional encoding
@@ -627,8 +632,6 @@ class AIPos(Vignette):
         ctx.set_line_width(1)
         ctx.rectangle(x0 - 4, y0 - 4, cw * d + 8, ch * npos + 8)
         ctx.stroke()
-        draw_text(ctx, "维度 → 频率由高到低", x0 + cw * d / 2, y0 - 30, size=28, font="sans", weight=500,
-                  color=WHITE, alpha=0.7)
         # tokens
         toks = list("我们用波理解世界")
         hi = int((lt - 0.9) / 0.3)
@@ -658,7 +661,7 @@ class AIPos(Vignette):
             p = (ys - y0) / ch
             ang = p / (10000 ** (2 * (col // 2) / d))
             stroke_poly(ctx, np.stack([1690 + j * 75 + 26 * np.sin(ang), ys], 1), c, 2.0, 0.9 * a)
-        vignette_title(ctx, lt, "人工智能", "TRANSFORMER · 2017", "位置编码", y=150)
+        vignette_title(ctx, lt, "人工智能", "TRANSFORMER · 2017", y=150)
 
 
 # ---------------------------------------------------------------------- 8. FFT
@@ -699,7 +702,7 @@ class FFT(Vignette):
         # comparison
         a = smooth((lt - 0.6) / 0.4)
         bx = 1260.0
-        draw_text(ctx, "100 万个数据点", bx, 330, size=34, font="sans", weight=500, color=WHITE, alpha=a, anchor="left")
+        draw_math(ctx, r"$N = 10^{6}$", bx + 60, 330, size=36, color=WHITE, alpha=a)
         draw_text(ctx, "直接计算", bx, 420, size=30, font="sans", weight=400, color=(0.8, 0.85, 1.0), alpha=a,
                   anchor="left")
         draw_math(ctx, r"$N^2 \approx 10^{12}$", bx + 330, 420, size=34, color=RED, alpha=a)
@@ -715,9 +718,9 @@ class FFT(Vignette):
         ctx.fill()
         draw_text(ctx, "快 50000 倍", bx, 700, size=40, font="sans", weight=700, color=GOLD,
                   alpha=smooth((lt - 1.7) / 0.4), anchor="left", glow=8, glow_alpha=0.4)
-        draw_text(ctx, "高斯 · 1805（手稿，1866 年才出版）", bx, 770, size=28, font="sans", weight=400,
+        draw_text(ctx, "高斯早在 1805 年就用过", bx, 770, size=28, font="sans", weight=400,
                   color=(0.85, 0.9, 1.0), alpha=0.8 * smooth((lt - 2.2) / 0.4), anchor="left")
-        vignette_title(ctx, lt, "FFT", "COOLEY–TUKEY · 1965", "快速傅里叶变换", y=150, layout="tr")
+        vignette_title(ctx, lt, "FFT", "COOLEY–TUKEY · 1965", y=150, layout="tr")
 
 
 # ---------------------------------------------------------------------- Fourier optics: Webb's diffraction spikes
@@ -765,12 +768,16 @@ class Optics(Vignette):
         if not hasattr(self, "hst"):
             from ..data import image
             xdf = image("hubble_deep_field", None, gray=False)[..., :3]
-            self.hst = xdf[578 - 60:578 + 60, 755 - 60:755 + 60]
+            # green band only: the XDF stacks exposures taken at two roll angles, and the red band carries the
+            # second (diagonal) set of spikes
+            g = xdf[578 - 60:578 + 60, 755 - 60:755 + 60, 1]
+            lo, hi = np.percentile(g, 50), np.percentile(g, 99.95)
+            self.hst = apply_lut(np.clip((g - lo) / (hi - lo), 0, 1) ** 0.75, LUT_ICE)
         # left column: Webb mirror (aperture) and Hubble's real star
         a = smooth(lt / 0.35)
         vis = apply_lut(self.ap_vis * 0.85, LUT_GOLD)
         paint_image(ctx, surface_from_array(vis), 430, 470, 340, 340, a)
-        draw_text(ctx, "韦布：18 块六边形镜面", 430, 680, size=30, font="sans", weight=500, color=GOLD, alpha=a)
+        draw_text(ctx, "韦布镜面", 430, 680, size=32, font="sans", weight=500, color=GOLD, alpha=a)
         b = ease_out((lt - 0.4) / 0.4, 2)
         if b > 0:
             arrow(ctx, 640, 470, lerp(640, 820, b), 470, WHITE, 0.8 * b, 2.5, 16)
@@ -779,18 +786,16 @@ class Optics(Vignette):
         if r > 0:
             vis = apply_lut(self.psf * r, LUT_ICE)
             paint_image(ctx, surface_from_array(vis), 1080, 470, 460, 460, 1.0)
-            draw_text(ctx, "算出来的星芒：6 + 2 道", 1080, 730, size=30, font="sans", weight=500, color=CYAN, alpha=r)
+            draw_text(ctx, "算出的星芒", 1080, 735, size=32, font="sans", weight=500, color=CYAN, alpha=r)
         c = smooth((lt - 1.4) / 0.5)
         if c > 0:
-            paint_image(ctx, surface_from_array(self.hst.astype(np.float32) / 255.0), 1620, 470, 340, 340, c,
-                        filt=cairo.FILTER_BEST)
+            paint_image(ctx, surface_from_array(self.hst), 1620, 470, 340, 340, c, filt=cairo.FILTER_BEST)
             set_rgba(ctx, WHITE, 0.3 * c)
             ctx.set_line_width(1.2)
             ctx.rectangle(1450, 300, 340, 340)
             ctx.stroke()
-            draw_text(ctx, "哈勃真实照片：十字支架", 1620, 680, size=30, font="sans", weight=500, color=WHITE, alpha=c)
-            draw_text(ctx, "→ 4 道星芒", 1620, 722, size=30, font="sans", weight=500, color=WHITE, alpha=c)
-        vignette_title(ctx, lt, "傅里叶光学", "FOURIER OPTICS", "透镜以光速完成傅里叶变换", y=130)
+            draw_text(ctx, "哈勃实拍", 1620, 680, size=32, font="sans", weight=500, color=WHITE, alpha=c)
+        vignette_title(ctx, lt, "傅里叶光学", "FOURIER OPTICS", y=130)
 
 
 # ---------------------------------------------------------------------- spherical harmonics
@@ -846,7 +851,7 @@ class SphHarm(Vignette):
                         col = CYAN if s_line[i] >= 0 else MAGENTA
                         line3(ctx, cam, col_line[i:k], col, 1.1, 0.8 * a)
             draw_text(ctx, f"l = {l}", 250, y, size=30, font="latin", weight=500, color=WHITE, alpha=0.7)
-        vignette_title(ctx, lt, "球谐函数", "SPHERICAL HARMONICS", "球面上的傅里叶级数", y=110, layout="tr")
+        vignette_title(ctx, lt, "球谐函数", "SPHERICAL HARMONICS", y=110, layout="tr")
 
 
 # ---------------------------------------------------------------------- tides
@@ -889,7 +894,7 @@ class Tides(Vignette):
                 draw_text(ctx, lab, px[0], py[0], size=30, font="sans", weight=600, color=GOLD, alpha=a)
             draw_text(ctx, "30 天", 1700, 760, size=28, font="sans", weight=400, color=WHITE, alpha=0.6 * a,
                       anchor="right")
-        vignette_title(ctx, lt, "潮汐", "TIDES · KELVIN 1872", "开尔文潮汐预测机：用滑轮把正弦波加起来", y=110, layout="tc")
+        vignette_title(ctx, lt, "潮汐", "TIDES · KELVIN 1872", y=110, layout="tc")
 
 
 def beyond_scenes():

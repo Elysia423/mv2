@@ -4,16 +4,17 @@ from functools import lru_cache
 
 import numpy as np
 
-from .core import FPS, ROOT
+from .core import ROOT
 
 BUILD = os.path.join(ROOT, "build")
+SPEC_RATE = 60  # rows per second of build/spectrum.npy, independent of the video frame rate
 
 
 @lru_cache(maxsize=1)
 def spectrum():
     p = os.path.join(BUILD, "spectrum.npy")
     if not os.path.exists(p):
-        return np.zeros((int(240 * FPS), 256), np.float32)
+        return np.zeros((int(240 * SPEC_RATE), 256), np.float32)
     from scipy.ndimage import gaussian_filter1d
     db = np.load(p)
     nb = db.shape[1]
@@ -25,7 +26,7 @@ def spectrum():
 
 def spec_at(t):
     s = spectrum()
-    i = int(round(t * FPS))
+    i = int(round(t * SPEC_RATE))
     return s[max(0, min(len(s) - 1, i))]
 
 

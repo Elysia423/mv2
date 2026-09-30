@@ -45,12 +45,13 @@ class Captions:
             band = min(1.0, lt / 0.3) * a_out
             if band > 0:
                 import cairo
-                g = cairo.LinearGradient(0, y - 100, 0, H)
+                # strong enough to hold the text over busy shots (3D terrain, montage); invisible on dark ones
+                g = cairo.LinearGradient(0, y - 150, 0, H)
                 g.add_color_stop_rgba(0, 0, 0, 0, 0)
-                g.add_color_stop_rgba(0.45, 0, 0, 0, 0.45 * band)
-                g.add_color_stop_rgba(1, 0, 0, 0, 0.6 * band)
+                g.add_color_stop_rgba(0.35, 0, 0, 0, 0.62 * band)
+                g.add_color_stop_rgba(1, 0, 0, 0, 0.78 * band)
                 ctx.set_source(g)
-                ctx.rectangle(0, y - 100, W, H - y + 100)
+                ctx.rectangle(0, y - 150, W, H - y + 150)
                 ctx.fill()
             # the whole line appears within ~0.35 s so reading time is not eaten by the animation
             draw_text_chars(ctx, zh, W / 2, y, lt, size=48, font="sans", weight=500, color=WHITE, alpha=0.97 * a_out,
