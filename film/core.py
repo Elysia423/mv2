@@ -22,6 +22,7 @@ FONTS = {
     "brush": ("MaShanZheng.ttf", False),
     "latin": ("Montserrat.ttf", True),
     "mono": ("JetBrainsMono.ttf", True),
+    "emoji": ("NotoEmoji.ttf", True),
     "garamond": ("Cormorant.ttf", True),
     "music": ("NotoMusic.ttf", False),
 }

@@ -320,63 +320,69 @@ class Score:
     # ---- sections
     def pads(self):
         for a, b, c in S.chord_events():
-            if 80.0 <= a < 88.0:
-                continue
             notes = S.CHORDS[c]["pad"]
             g = 0.16
             att, rel = 1.0, 2.2
-            if a < 16:
-                att, rel, g = 5.0, 0.9, 0.10
-                b = 14.6
-            if 16 <= a < 24:
+            if a < S.T_TITLE:
+                att, rel, g = 4.0, 0.9, 0.10
+                b = S.T_TITLE - 1.2
+            if S.T_TITLE <= a < S.T_EULER:
                 g = 0.2
-            if 196 <= a < 204:
+            if S.T_CHORD <= a < S.T_EAR:
+                # the pure three-sine chord owns the first 6 s; a soft pad joins for the winding machine
+                a, att, g = S.T_WIND, 2.0, 0.09
+            if S.T_HEAT <= a < S.T_MONTAGE:
                 g = 0.14
-            if a >= 228:
-                att, rel, g = 0.8, 4.0, 0.18
+            if a >= 222:
+                att, rel, g = 0.8, 3.5, 0.18
             for nn in notes:
                 self.b["pad"].add(a, pad_note(S.freq(nn), b - a, att, rel), g)
 
     def intro(self):
-        # sparse bell/plucks answering the first circle
-        seq = [(2.0, "E5"), (4.0, "A4"), (5.0, "C5"), (7.0, "E5"), (8.0, "B4"), (9.0, "A4"), (10.5, "C5"),
-               (11.0, "E5"), (12.0, "A5")]
+        # sparse bells answering the first circle
+        seq = [(1.5, "E5"), (3.0, "A4"), (4.0, "C5"), (5.5, "E5"), (6.5, "B4"), (7.5, "A4"), (8.5, "C5"),
+               (9.0, "E5"), (10.0, "A5")]
         for t, nn in seq:
             self.b["bell"].add(t, bell(S.freq(nn), 4.0), 0.5, pan=RNG.uniform(-0.5, 0.5))
         # the 'sound of a circle' -- a pure 220 Hz sine, then three circles = three harmonics
-        dur = 12.0
-        n = int(dur * SR)
-        t = np.arange(n) / SR + 3.0
-        e = np.clip((t - 3.0) / 1.5, 0, 1) * np.clip((15.0 - t) / 0.6, 0, 1)
+        t0, t1 = 2.2, 11.4
+        n = int((t1 - t0 + 0.5) * SR)
+        t = np.arange(n) / SR + t0
+        e = np.clip((t - t0) / 1.2, 0, 1) * np.clip((t1 - t) / 0.5, 0, 1)
         x = np.sin(2 * np.pi * 220 * t)
-        h2 = np.clip((t - 8.0) / 1.0, 0, 1)
+        h2 = np.clip((t - 6.0) / 1.0, 0, 1)
         x += h2 * (0.5 * np.sin(2 * np.pi * 440 * t + 0.4) + 0.33 * np.sin(2 * np.pi * 660 * t + 1.1))
-        self.b["tone"].add(3.0, x * e * 0.16)
+        self.b["tone"].add(t0, x * e * 0.16)
         # rising tension then silence before the title
-        self.b["fx"].add(11.0, riser(4.0, 150, 2500), 0.8)
-        self.b["fx"].add(12.0, sine_noise(int(3.0 * SR), 40, 400) * np.linspace(0, 1, int(3.0 * SR)) ** 2, 0.35)
+        self.b["fx"].add(8.0, riser(3.4, 150, 2500), 0.8)
+        self.b["fx"].add(9.0, sine_noise(int(2.4 * SR), 40, 400) * np.linspace(0, 1, int(2.4 * SR)) ** 2, 0.35)
 
     def impacts(self):
         for t in S.IMPACTS:
-            self.b["fx"].add(t, impact(), 0.9 if t != 16 else 1.1)
+            self.b["fx"].add(t, impact(), 1.1 if t == S.T_TITLE else 0.9)
             self.b["fx"].add(t, sine_noise(int(0.25 * SR), 3000, 16000) * np.exp(-np.arange(int(0.25 * SR)) / SR / 0.05), 0.3)
         # softer section hits
-        for t in [48.0, 80.0, 112.0, 196.0]:
-            self.b["fx"].add(t, impact(3.0), 0.35)
+        for t in [S.T_EULER, S.T_PANELS, S.T_CHORD, S.T_WAVES2D, S.T_LAPLACE, S.T_HEAT]:
+            self.b["fx"].add(t, impact(3.0), 0.3)
+        # a short whoosh on every hard cut
+        cuts = [S.T_SQUARE, S.T_TF3D, S.C1_SAW, S.T_QUICK, S.T_PTOLEMY, S.T_WIND, S.T_EAR, S.T_SHAZAM, S.T_NOISE,
+                S.T_IMGBUILD, S.T_SPEC3D, S.T_FILTER, S.T_JPEG, S.T_WAVELET] + [v for _, v in S.VIGNETTES]
+        for k, t in enumerate(cuts):
+            self.b["fx"].add(t - 0.5, riser(0.5, 800, 6000, 50, 100 + k, 1.5), 0.3)
 
     def title(self):
         # shimmering high arpeggio
         tones = ["A5", "E6", "B5", "C6", "E6", "A6", "B5", "E6"]
         i = 0
-        for t in self.beats(16.5, 23.5, S.BEAT / 2):
+        for t in self.beats(S.T_TITLE + 0.5, S.T_EULER - 0.5, S.BEAT / 2):
             self.b["bell"].add(t, bell(S.freq(tones[i % len(tones)]), 2.5), 0.35 * (0.6 + 0.4 * (i % 2)),
                                pan=0.6 * math.sin(i * 1.3))
             i += 1
-        self.b["fx"].add(21.0, riser(3.0, 300, 3000), 0.4)
+        self.b["fx"].add(S.T_EULER - 2.5, riser(2.5, 300, 3000), 0.4)
 
     def fourier_tone(self):
         """Chapter 1: the audible Fourier series. Harmonic count follows the visual circle count."""
-        a, b = 24.0, 43.6
+        a, b = S.T_EULER, S.C1_ECG + 0.6
         n = int((b - a) * SR)
         t = a + np.arange(n) / SR
         # pitch follows the chord root, eighth-note pattern
@@ -396,9 +402,10 @@ class Score:
             g = np.clip(tl / 0.004, 0, 1) * (0.55 + 0.45 * np.exp(-tl / 0.12)) * np.clip((L / SR - tl) / 0.015, 0, 1)
             gate[i0:i1] = g * (1.0 if k % 2 == 0 else 0.8)
         f_inst[f_inst == 0] = 220.0
-        # during the first single-circle phase, a steady pure sine (no pulsing) so it reads as 'one circle'
-        steady = np.clip((29.5 - t) / 0.4, 0, 1)
-        gate = gate * (1 - steady) + steady * np.clip((t - 24.0) / 0.3, 0, 1) * 0.85
+        # while there is a single circle (Euler + the start of the square), a steady pure sine
+        t_first = S.C1_COUNT_KEYS[1][0]
+        steady = np.clip((t_first - t) / 0.4, 0, 1)
+        gate = gate * (1 - steady) + steady * np.clip((t - a) / 0.3, 0, 1) * 0.85
         f_inst = f_inst * (1 - steady) + 220.0 * steady
         ph = np.cumsum(f_inst) / SR
         # control-rate harmonic amplitudes
@@ -419,7 +426,7 @@ class Score:
             fk = f_inst * k
             ak = ak * (fk < 11000) * np.clip((11000 - fk) / 2000, 0, 1)
             x += ak * np.sin(2 * np.pi * k * ph)
-        fade = np.clip((43.4 - t) / 0.5, 0, 1)
+        fade = np.clip((S.C1_ECG + 0.4 - t) / 0.5, 0, 1)
         x = onepole_lp(x, 9000) * gate * fade
         self.b["tone"].add(a, x * 0.3)
         # heartbeats
@@ -427,8 +434,8 @@ class Score:
             self.b["kick"].add(tb - 0.02, heartbeat(), 0.9)
 
     def chord_section(self):
-        """Exactly three pure sines: A3, C4, E4."""
-        a, b = 80.0, 88.6
+        """Exactly three pure sines: A3, C4, E4 (they carry on under the winding machine)."""
+        a, b = S.T_CHORD, S.T_EAR + 0.6
         n = int((b - a) * SR)
         t = np.arange(n) / SR
         x = np.zeros(n)
@@ -437,7 +444,8 @@ class Score:
             x += np.sin(2 * np.pi * f * t) * e
         x *= np.clip((b - a - t) / 1.2, 0, 1)
         self.b["chord"].add(a, x * 0.14)
-        self.b["fx"].add(93.0, riser(3.0, 200, 3000), 0.6)
+        for tt, nn in [(74.0, "E5"), (75.0, "A4"), (76.5, "C5"), (78.0, "B4"), (79.0, "A4")]:
+            self.b["bell"].add(tt, bell(S.freq(nn), 3.0), 0.3, pan=RNG.uniform(-0.4, 0.4))
 
     def arps(self, a, b, g=0.5, octave=4, pattern=(0, 1, 2, 3, 2, 1, 3, 2), step=S.BEAT / 4, bright=1.0):
         i = 0
@@ -513,91 +521,96 @@ class Score:
         self.title()
         self.fourier_tone()
         # chapter 1 light beat
-        for t in self.beats(32.0, 42.5, S.BEAT):
+        for t in self.beats(26.0, S.C1_ECG, S.BEAT):
             self.kick_at(t, 0.55)
-        for t in self.beats(36.0, 42.5, S.BEAT, S.BEAT / 2):
+        for t in self.beats(30.0, S.C1_ECG, S.BEAT, S.BEAT / 2):
             self.b["drums"].add(t, hat(0.3))
-        self.bassline(32.0, 42.5, "hold", 0.6)
+        self.bassline(26.0, S.C1_ECG, "hold", 0.6)
         # chapter 2: drawing with circles
-        for t in self.beats(48.0, 56.0, 2 * S.BEAT):
+        for t in self.beats(42.0, 46.0, 2 * S.BEAT):
             self.kick_at(t, 0.7)
-        self.arps(48.0, 64.0, 0.28, 4, bright=0.7)
-        self.bassline(48.0, 56.0, "hold", 0.7)
-        self.bassline(56.0, 62.0, "pump", 0.8)
-        self.groove(56.0, 62.0, 1, False, "8", False, 0.8, 0.85)
-        self.roll(60.0, 64.0, 0.45)
-        self.b["fx"].add(60.0, riser(4.0), 0.9)
-        self.groove(64.0, 78.0, 1, True, "16", True, 1.0)
-        self.bassline(64.0, 78.0, "pump", 1.0)
-        self.arps(64.0, 80.0, 0.4, 4)
-        self.b["fx"].add(77.0, downlifter(3.0), 0.5)
+        self.arps(42.0, 50.0, 0.28, 4, bright=0.7)
+        self.bassline(42.0, 46.0, "hold", 0.7)
+        self.bassline(46.0, 50.0, "pump", 0.8)
+        self.groove(46.0, 48.0, 1, False, "8", False, 0.8, 0.85)
+        self.roll(48.0, 50.0, 0.45)
+        self.b["fx"].add(46.0, riser(4.0), 0.9)
+        self.groove(50.0, 62.0, 1, True, "16", True, 1.0)
+        self.bassline(50.0, 62.0, "pump", 1.0)
+        self.arps(50.0, 66.0, 0.4, 4)
+        self.bassline(62.0, 66.0, "hold", 0.6)
+        self.b["fx"].add(63.0, downlifter(3.0), 0.5)
         # chapter 3: sound
         self.chord_section()
         self.melody_intro()
-        self.groove(96.0, 112.0, 1, True, "16", True, 1.0)
-        self.bassline(96.0, 112.0, "drive", 1.0)
-        self.arps(96.0, 112.0, 0.35, 4)
-        self.melody(96.0)
+        self.roll(86.0, 88.0, 0.4)
+        self.groove(88.0, 100.0, 1, True, "16", True, 1.0)
+        self.bassline(88.0, 104.0, "drive", 1.0)
+        self.arps(88.0, 104.0, 0.35, 4)
+        self.melody(88.0)
         # chapter 4: images
-        self.groove(112.0, 128.0, 1, False, "8", True, 0.85)
-        self.groove(128.0, 142.0, 1, True, "16", True, 0.9)
-        self.bassline(112.0, 142.0, "pump", 0.9)
-        self.arps(112.0, 144.0, 0.3, 4, pattern=(0, 2, 4, 5, 3, 1, 4, 2))
-        self.roll(140.0, 144.0, 0.45)
-        self.b["fx"].add(140.0, riser(4.0), 0.8)
+        self.groove(100.0, 112.0, 1, False, "8", True, 0.85)
+        self.groove(112.0, 126.0, 1, True, "16", True, 0.9)
+        self.bassline(104.0, 126.0, "pump", 0.9)
+        self.arps(104.0, 130.0, 0.3, 4, pattern=(0, 2, 4, 5, 3, 1, 4, 2))
+        self.roll(126.0, 130.0, 0.45)
+        self.b["fx"].add(126.0, riser(4.0), 0.8)
         # beyond
-        self.groove(144.0, 166.0, 1, True, "16", True, 1.0)
-        self.bassline(144.0, 166.0, "drive", 1.0)
-        self.arps(144.0, 166.0, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
-        self.melody(144.0, 0, 0.9)
-        self.b["fx"].add(165.5, gw_chirp(3.4, 3.0), 0.9)  # merger at ~168.5
-        self.b["fx"].add(168.5, impact(3.0), 0.45)
-        self.bassline(166.0, 172.0, "hold", 0.6)
-        self.groove(172.0, 190.0, 1, True, "16", True, 1.0)
-        self.bassline(172.0, 190.0, "drive", 1.0)
-        self.arps(172.0, 196.0, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
-        self.melody(176.0, 1, 0.75)
-        self.groove(190.0, 194.0, 1, True, "8", False, 0.9)
-        self.bassline(190.0, 194.0, "pump", 0.9)
-        self.b["fx"].add(193.0, downlifter(3.0), 0.5)
-        for t in [148.0, 154.0, 160.0, 166.0, 172.0, 178.0, 184.0, 190.0]:
-            self.b["fx"].add(t - 0.6, riser(0.6, 800, 6000, 60, int(t), 1.5), 0.35)
+        gw0 = S.T_GW
+        self.groove(S.T_BEYOND, gw0, 1, True, "16", True, 1.0)
+        self.bassline(S.T_BEYOND, gw0, "drive", 1.0)
+        self.arps(S.T_BEYOND, gw0, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
+        self.melody(S.T_BEYOND, 0, 0.9)
+        self.b["fx"].add(gw0, gw_chirp(3.4, S.GW_MERGE - gw0), 0.9)
+        self.b["fx"].add(S.GW_MERGE, impact(3.0), 0.45)
+        self.bassline(gw0, gw0 + 4.0, "hold", 0.6)
+        self.groove(gw0 + 4.0, S.T_LAPLACE, 1, True, "16", True, 1.0)
+        self.bassline(gw0 + 4.0, S.T_LAPLACE, "drive", 1.0)
+        self.arps(gw0 + 4.0, S.T_LAPLACE, 0.35, 5, pattern=(0, 1, 2, 3, 4, 5, 4, 2))
+        self.melody(158.0, 1, 0.75)
+        # the wider family: Laplace, wavelets
+        self.groove(S.T_LAPLACE, S.T_HEAT - 2.0, 1, False, "8", True, 0.85)
+        self.bassline(S.T_LAPLACE, S.T_HEAT - 2.0, "pump", 0.9)
+        self.arps(S.T_LAPLACE, S.T_HEAT, 0.3, 4)
+        self.b["fx"].add(S.T_HEAT - 3.0, downlifter(3.0), 0.5)
         # heat breakdown
-        seq = [(196.5, "E5"), (197.5, "A4"), (198.5, "C5"), (199.5, "B4"), (200.5, "A4"), (201.5, "C5"),
-               (202.5, "F5"), (203.5, "E5")]
-        for t, nn in seq:
-            self.b["bell"].add(t, bell(S.freq(nn), 3.5), 0.45, pan=RNG.uniform(-0.4, 0.4))
-        self.bassline(196.0, 204.0, "hold", 0.5)
+        seq = [(0.5, "E5"), (1.5, "A4"), (2.5, "C5"), (3.5, "B4"), (4.5, "A4"), (5.5, "C5"), (6.5, "F5"), (7.5, "E5")]
+        for dt, nn in seq:
+            self.b["bell"].add(S.T_HEAT + dt, bell(S.freq(nn), 3.5), 0.45, pan=RNG.uniform(-0.4, 0.4))
+        self.bassline(S.T_HEAT, S.T_MONTAGE, "hold", 0.5)
         # montage build
-        for t in self.beats(204.0, 212.0, S.BEAT):
+        for t in self.beats(S.T_MONTAGE, S.T_FINALE, S.BEAT):
             self.kick_at(t, 0.85)
-        self.arps(204.0, 212.0, 0.35, 4)
-        self.roll(208.0, 212.0, 0.5)
-        self.b["fx"].add(206.0, riser(6.0, 150, 3000), 1.0)
-        self.bassline(204.0, 212.0, "pump", 0.9)
+        self.arps(S.T_MONTAGE, S.T_FINALE, 0.35, 4)
+        self.roll(S.T_FINALE - 4.0, S.T_FINALE, 0.5)
+        self.b["fx"].add(S.T_MONTAGE + 2.0, riser(6.0, 150, 3000), 1.0)
+        self.bassline(S.T_MONTAGE, S.T_FINALE, "pump", 0.9)
         # finale
-        self.groove(212.0, 226.0, 1, True, "16", True, 1.0)
-        self.bassline(212.0, 228.0, "drive", 1.0)
-        self.arps(212.0, 228.0, 0.35, 5)
-        self.melody(212.0, 0, 1.0)
-        self.melody(212.0, 1, 0.35)
+        f0 = S.T_FINALE
+        self.groove(f0, f0 + 14.0, 1, True, "16", True, 1.0)
+        self.bassline(f0, f0 + 16.0, "drive", 1.0)
+        self.arps(f0, f0 + 16.0, 0.35, 5)
+        self.melody(f0, 0, 1.0)
+        self.melody(f0, 1, 0.35)
         # bookend: a single pure circle-tone
         n = int(6.5 * SR)
         t = np.arange(n) / SR
-        self.b["tone"].add(225.0, np.sin(2 * np.pi * 220 * t) * np.clip(t / 2.0, 0, 1) * np.clip((6.5 - t) / 3.0, 0, 1) * 0.12)
-        self.b["bell"].add(228.0, bell(S.freq("A5"), 4.0), 0.5)
-        self.b["bell"].add(228.0, bell(S.freq("E5"), 4.0), 0.4)
+        self.b["tone"].add(f0 + 13.0, np.sin(2 * np.pi * 220 * t) * np.clip(t / 2.0, 0, 1) * np.clip((6.5 - t) / 3.0, 0, 1) * 0.12)
+        self.b["bell"].add(f0 + 16.0, bell(S.freq("A5"), 4.0), 0.5)
+        self.b["bell"].add(f0 + 16.0, bell(S.freq("E5"), 4.0), 0.4)
 
     def melody_intro(self):
-        # 88-96: first half of the melody, softer, with plucks and pad (the 'ear' section)
-        t = 88.0
+        # first half of the melody, softer, with plucks (the ear / song-recognition shots)
+        t0 = S.T_EAR
+        t = t0
         for beats, nn in S.MELODY[:16]:
             dur = beats * S.BEAT
-            if nn is not None and t < 95.9:
+            if nn is not None and t < S.T_DROP - 0.1:
                 self.b["lead"].add(t, lead_note(S.freq(nn), dur * 0.9), 0.75)
             t += dur
-        self.arps(88.0, 96.0, 0.22, 4, pattern=(0, 2, 4, 2), step=S.BEAT / 2, bright=0.6)
-        self.bassline(88.0, 96.0, "hold", 0.6)
+        self.arps(t0, S.T_DROP, 0.22, 4, pattern=(0, 2, 4, 2), step=S.BEAT / 2, bright=0.6)
+        self.bassline(t0, S.T_DROP, "hold", 0.6)
+        self.b["fx"].add(S.T_DROP - 3.0, riser(3.0, 200, 3000), 0.6)
 
     # ---- mix
     def sidechain(self):
@@ -633,7 +646,7 @@ class Score:
         """A held breath before the title impact, and a clean fade at the very end."""
         t = np.arange(N) / SR
         g = np.ones(N)
-        suck = np.clip((t - 15.0) / 0.15, 0, 1) * np.clip((16.0 - t) / 0.02, 0, 1)
+        suck = np.clip((t - (S.T_TITLE - 0.8)) / 0.15, 0, 1) * np.clip((S.T_TITLE - t) / 0.02, 0, 1)
         g *= 1 - 0.96 * suck
         g *= np.clip((S.DURATION - t) / 2.6, 0, 1) ** 1.5
         return g

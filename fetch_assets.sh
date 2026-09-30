@@ -12,5 +12,6 @@ get "montserrat/Montserrat%5Bwght%5D.ttf" Montserrat.ttf
 get "notomusic/NotoMusic-Regular.ttf" NotoMusic.ttf
 get "jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf" JetBrainsMono.ttf
 get "cormorantgaramond/CormorantGaramond%5Bwght%5D.ttf" Cormorant.ttf
+get "notoemoji/NotoEmoji%5Bwght%5D.ttf" NotoEmoji.ttf
 [ -s assets/brain.npy ] || python3 -c "import numpy as np, skimage.data as d; np.save('assets/brain.npy', d.brain())"
 echo "assets ready"

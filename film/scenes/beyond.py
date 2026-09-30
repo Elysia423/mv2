@@ -9,8 +9,9 @@ from .. import story as S
 from ..core import (BLUE, CYAN, GOLD, H, LUT_DIVERGE, LUT_FIRE, LUT_GOLD, LUT_GRAY, LUT_ICE, MAGENTA, ORANGE, RED,
                     TEAL, VIOLET, W, WHITE, apply_lut, arrow, background, circle, clamp, draw_math, draw_text,
                     draw_text_chars, ease_out, ease_out_back, ease_out_expo, glow_dot, hsv, lerp, mix, paint_image,
-                    polyline, remap, rounded_rect, set_rgba, smooth, stroke_poly, surface_from_array, window)
+                    polyline, remap, rounded_rect, set_rgba, smooth, smoother, stroke_poly, surface_from_array, window)
 from ..data import beat_pulse, brain
+from ..three import Camera, line3, line3_depth, axis3
 from .base import Scene
 
 
@@ -32,7 +33,7 @@ class Vignette(Scene):
 
     def __init__(self, start):
         self.start = start
-        self.end = start + 6.0
+        self.end = start + 4.0
 
     def effects(self, t, lt):
         return {"flash": 0.12 * math.exp(-max(0.0, lt) / 0.15)}
@@ -40,7 +41,7 @@ class Vignette(Scene):
 
 # ---------------------------------------------------------------------- header
 class BeyondHeader(Scene):
-    start, end = 144.0, 148.0
+    start, end = S.T_BEYOND, S.T_BEYOND + 4.0
     fade_out = 0.25
     bloom = 1.0
 
@@ -105,7 +106,7 @@ class Prism(Vignette):
         # entry and exit points
         pin = (lerp(A[0], B[0], 0.55), lerp(A[1], B[1], 0.55))
         pout_mid = (lerp(A[0], C[0], 0.58), lerp(A[1], C[1], 0.58))
-        beam = ease_out(lt / 0.8, 2)
+        beam = ease_out(lt / 0.5, 2)
         src = (0.0, pin[1] - 150)
         bx = lerp(src[0], pin[0], beam)
         by = lerp(src[1], pin[1], beam)
@@ -125,7 +126,7 @@ class Prism(Vignette):
         set_rgba(ctx, (0.8, 0.9, 1.0), 0.8)
         ctx.set_line_width(2)
         ctx.stroke()
-        fan = ease_out((lt - 0.7) / 0.8, 2)
+        fan = ease_out((lt - 0.4) / 0.5, 2)
         screen_x, y0, y1 = 1500.0, 250.0, 780.0
         if fan > 0:
             nr = 90
@@ -149,7 +150,7 @@ class Prism(Vignette):
                 ctx.set_line_width(4)
                 ctx.stroke()
         # spectrum strip with absorption lines
-        st = smooth((lt - 1.4) / 0.6)
+        st = smooth((lt - 0.85) / 0.4)
         if st > 0:
             n = 300
             for i in range(n):
@@ -159,7 +160,7 @@ class Prism(Vignette):
                 ctx.rectangle(screen_x, lerp(y0, y1, u), 70, (y1 - y0) / n + 1)
                 ctx.fill()
             for k, (wl, el) in enumerate(FRAUNHOFER):
-                a = smooth((lt - 2.3 - 0.25 * k) / 0.3)
+                a = smooth((lt - 1.2 - 0.12 * k) / 0.25)
                 if a <= 0:
                     continue
                 u = (700 - wl) / 300
@@ -176,7 +177,16 @@ class Prism(Vignette):
                           anchor="left")
                 draw_text(ctx, f"{wl:.0f} nm", screen_x + 118 + 18 * len(el) + 16, y + 1, size=13, font="mono",
                           weight=300, color=WHITE, alpha=0.5 * a, anchor="left")
-        vignette_title(ctx, lt, "光", "LIGHT", "棱镜：把阳光按频率展开")
+        # helium: a bright emission line seen in the solar chromosphere during the 1868 eclipse
+        ah = smooth((lt - 2.2) / 0.3)
+        if ah > 0:
+            y = lerp(y0, y1, (700 - 587.6) / 300)
+            set_rgba(ctx, (1.0, 1.0, 0.85), ah)
+            ctx.rectangle(screen_x - 6, y - 1.5, 82, 3)
+            ctx.fill()
+            draw_text(ctx, "He  587.6 nm · 1868", screen_x - 20, y - 2, size=22, font="latin", weight=700,
+                      color=(1.0, 0.95, 0.6), alpha=ah, anchor="right", glow=6, glow_alpha=0.5)
+        vignette_title(ctx, lt, "光谱", "SPECTRUM", "棱镜：把阳光按频率展开")
 
 
 # ---------------------------------------------------------------------- 2. DNA
@@ -247,7 +257,7 @@ class DNA(Vignette):
         a = smooth(lt / 0.5)
         self.helix(ctx, t, lt, 640.0, 520.0, a)
         # X-ray beam
-        bx = ease_out((lt - 0.6) / 0.6, 2)
+        bx = ease_out((lt - 0.35) / 0.4, 2)
         if bx > 0:
             ctx.move_to(740, 520)
             ctx.line_to(lerp(740, 1150, bx), 520)
@@ -256,7 +266,7 @@ class DNA(Vignette):
             ctx.stroke()
             arrow(ctx, 900, 520, lerp(900, 1110, bx), 520, WHITE, 0.6 * bx, 2, 14)
             draw_text(ctx, "X 射线", 925, 490, size=20, font="sans", weight=500, color=WHITE, alpha=0.8 * bx, anchor="left")
-        rev = smooth((lt - 1.2) / 1.2)
+        rev = smooth((lt - 0.7) / 0.8)
         if rev > 0:
             vis = apply_lut(self.diff * rev, LUT_GOLD)
             surf = surface_from_array(vis)
@@ -266,7 +276,7 @@ class DNA(Vignette):
                       tracking=0.1)
             draw_text(ctx, "罗莎琳德·富兰克林", 1400, 812, size=18, font="sans", weight=400, color=WHITE,
                       alpha=0.6 * rev)
-        vignette_title(ctx, lt, "DNA", "DOUBLE HELIX", "X 射线衍射图 = 分子的傅里叶变换")
+        vignette_title(ctx, lt, "DNA", "PHOTO 51 · 1952", "X 射线衍射图 = 分子的傅里叶变换")
 
 
 # ---------------------------------------------------------------------- 3. MRI
@@ -286,7 +296,7 @@ class MRI(Vignette):
         ctx = cv.ctx
         background(ctx, t, dust=0.4)
         n = self.K.shape[0]
-        prog = clamp((lt - 0.6) / 4.2) ** 1.5
+        prog = clamp((lt - 0.35) / 2.9) ** 1.5
         nrows = max(1, int(prog * n))
         rows = self.order[:nrows]
         mask = np.zeros((n, 1), np.float32)
@@ -316,13 +326,13 @@ class MRI(Vignette):
         draw_math(ctx, r"$\mathcal{F}^{-1}$", (kx + ix) / 2, y - 40, size=36, color=GOLD, alpha=a)
         draw_text(ctx, "k 空间（频率）", kx, y + s / 2 + 40, size=22, font="sans", weight=500, color=CYAN, alpha=a)
         draw_text(ctx, "大脑图像", ix, y + s / 2 + 40, size=22, font="sans", weight=500, color=WHITE, alpha=a)
-        vignette_title(ctx, lt, "核磁共振", "MRI", "扫描仪测量的，其实是频率", x=110, y=110)
+        vignette_title(ctx, lt, "核磁共振", "MRI · k-SPACE", "扫描仪测量的，其实是频率", x=110, y=110)
 
 
 # ---------------------------------------------------------------------- 4. gravitational waves
 class GW(Vignette):
-    T_MERGE = 168.5
-    T_START = 165.5
+    T_MERGE = S.GW_MERGE
+    T_START = S.T_GW
 
     def f_of(self, t):
         tm = self.T_MERGE - self.T_START
@@ -402,7 +412,7 @@ class GW(Vignette):
             ctx.stroke()
         draw_text(ctx, "频率 ↑", px0, fy0 - 26, size=18, font="sans", weight=500, color=ORANGE, alpha=0.8, anchor="left")
         draw_text(ctx, "“啁啾”", px1, fy0 - 26, size=20, font="sans", weight=500, color=WHITE, alpha=0.8, anchor="right")
-        vignette_title(ctx, lt, "引力波", "GRAVITATIONAL WAVES", "2015 · LIGO", y=150)
+        vignette_title(ctx, lt, "引力波", "GRAVITATIONAL WAVES", "LIGO · GW150914", y=150)
 
     def effects(self, t, lt):
         e = super().effects(t, lt)
@@ -445,11 +455,11 @@ class WiFi(Vignette):
         ctx.stroke()
         draw_text(ctx, "频率 →", x1 + 40, base + 30, size=18, font="sans", weight=500, color=WHITE, alpha=0.6,
                   anchor="right")
-        a = smooth((lt - 1.8) / 0.6)
+        a = smooth((lt - 1.1) / 0.5)
         draw_text(ctx, "每一种颜色，都是一路独立的数据", 960, base - 420, size=24, font="sans", weight=400,
                   color=(0.85, 0.9, 1.0), alpha=0.85 * a)
         draw_text(ctx, "峰值处，其余载波恰好为零 —— 正交", 960, base + 60, size=18, font="sans", weight=400,
-                  color=GOLD, alpha=0.8 * smooth((lt - 2.6) / 0.6))
+                  color=GOLD, alpha=0.8 * smooth((lt - 1.7) / 0.5))
         vignette_title(ctx, lt, "Wi-Fi · 5G", "OFDM", "正交频分复用", y=150)
 
 
@@ -458,7 +468,7 @@ class Quantum(Vignette):
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.4, hue=(0.04, 0.03, 0.10))
-        sig = math.exp(0.95 * math.sin(2 * math.pi * (lt - 0.6) / 3.2))
+        sig = math.exp(0.95 * math.sin(2 * math.pi * (lt - 0.3) / 2.6))
         panels = [(560.0, "位置  x", CYAN, sig, 1), (1360.0, "动量  p", MAGENTA, 1 / sig, 0)]
         a = smooth(lt / 0.4)
         base = 700.0
@@ -499,7 +509,9 @@ class Quantum(Vignette):
             ctx.stroke()
             draw_text(ctx, lab, cx, base + 72, size=24, font="sans", weight=500, color=col, alpha=a)
         draw_math(ctx, r"$\Delta x \cdot \Delta p \geq \frac{\hbar}{2}$", 960, 330, size=48, color=WHITE,
-                  alpha=smooth((lt - 1.0) / 0.6), glow=8)
+                  alpha=smooth((lt - 0.5) / 0.5), glow=8)
+        draw_text(ctx, "量子计算：Shor 算法的核心，正是“量子傅里叶变换”", 960, 400, size=22, font="sans",
+                  weight=400, color=GOLD, alpha=0.85 * smooth((lt - 1.4) / 0.5))
         arrow(ctx, 890, 520, 1030, 520, GOLD, 0.8 * a, 2, 14)
         arrow(ctx, 1030, 545, 890, 545, GOLD, 0.8 * a, 2, 14)
         draw_math(ctx, r"$\mathcal{F}$", 960, 480, size=34, color=GOLD, alpha=a)
@@ -523,7 +535,7 @@ class AIPos(Vignette):
         background(ctx, t, dust=0.4)
         npos, d = self.pe.shape
         x0, y0, cw, ch = 640.0, 300.0, 7.5, 11.0
-        rev = ease_out((lt - 0.4) / 1.8, 2)
+        rev = ease_out((lt - 0.2) / 1.3, 2)
         ncol = int(rev * d)
         vis = apply_lut(np.clip(self.pe[:, :max(1, ncol)] * 0.5 + 0.5, 0, 1), LUT_DIVERGE) * 0.72
         paint_image(ctx, surface_from_array(vis), x0, y0, cw * max(1, ncol), ch * npos, 1.0, anchor="topleft",
@@ -535,10 +547,10 @@ class AIPos(Vignette):
         draw_text(ctx, "维度 → 频率由高到低", x0 + cw * d / 2, y0 - 30, size=18, font="sans", weight=500,
                   color=WHITE, alpha=0.7)
         # tokens
-        toks = list("傅里叶改变了世界")
-        hi = int((lt - 1.2) / 0.35)
+        toks = list("我们用波理解世界")
+        hi = int((lt - 0.9) / 0.3)
         for k, tok in enumerate(toks):
-            a = smooth((lt - 0.8 - k * 0.12) / 0.3)
+            a = smooth((lt - 0.4 - k * 0.08) / 0.25)
             y = y0 + (k * 6 + 3) * ch
             on = 0 <= hi and k == hi % len(toks)
             rounded_rect(ctx, 430, y - 22, 56, 44, 8)
@@ -558,12 +570,12 @@ class AIPos(Vignette):
                 ctx.stroke()
         # a few of the underlying sines
         for j, (col, c) in enumerate([(0, CYAN), (20, VIOLET), (60, MAGENTA)]):
-            a = smooth((lt - 1.6 - j * 0.3) / 0.4)
+            a = smooth((lt - 1.0 - j * 0.2) / 0.3)
             ys = np.linspace(y0, y0 + ch * npos, 200)
             p = (ys - y0) / ch
             ang = p / (10000 ** (2 * (col // 2) / d))
             stroke_poly(ctx, np.stack([1690 + j * 75 + 26 * np.sin(ang), ys], 1), c, 2.0, 0.9 * a)
-        vignette_title(ctx, lt, "人工智能", "TRANSFORMER", "位置编码", y=150)
+        vignette_title(ctx, lt, "人工智能", "TRANSFORMER · 2017", "位置编码", y=150)
 
 
 # ---------------------------------------------------------------------- 8. FFT
@@ -575,7 +587,7 @@ class FFT(Vignette):
         x0, x1, y0, y1 = 400.0, 1120.0, 300.0, 840.0
         xs = np.linspace(x0, x1, stages + 1)
         ys = np.linspace(y0, y1, n)
-        grow = ease_out(lt / 1.2, 2)
+        grow = ease_out(lt / 0.8, 2)
         # edges
         for s in range(stages):
             span = n >> (s + 1)
@@ -588,7 +600,7 @@ class FFT(Vignette):
                     ctx.set_line_width(1.2)
                     ctx.stroke()
         # pulses
-        period = 1.0
+        period = 0.6
         ph = (lt % period) / period
         s = int(lt / period) % stages
         for i in range(n):
@@ -602,7 +614,7 @@ class FFT(Vignette):
             for i in range(n):
                 circle(ctx, xs[s], ys[i], 5, WHITE, 0.8 * grow, fill=True)
         # comparison
-        a = smooth((lt - 1.0) / 0.5)
+        a = smooth((lt - 0.6) / 0.4)
         bx = 1260.0
         draw_text(ctx, "100 万个数据点", bx, 330, size=26, font="sans", weight=500, color=WHITE, alpha=a, anchor="left")
         draw_text(ctx, "直接计算", bx, 420, size=22, font="sans", weight=400, color=(0.8, 0.85, 1.0), alpha=a,
@@ -610,7 +622,7 @@ class FFT(Vignette):
         draw_math(ctx, r"$N^2 \approx 10^{12}$", bx + 330, 420, size=34, color=RED, alpha=a)
         draw_text(ctx, "FFT", bx, 510, size=24, font="latin", weight=700, color=GOLD, alpha=a, anchor="left")
         draw_math(ctx, r"$N\log_2 N \approx 2\times10^{7}$", bx + 330, 510, size=34, color=GOLD, alpha=a)
-        b = smooth((lt - 2.0) / 0.5)
+        b = smooth((lt - 1.2) / 0.4)
         L1 = 520 * b
         set_rgba(ctx, RED, 0.8)
         ctx.rectangle(bx, 580, L1, 16)
@@ -619,15 +631,173 @@ class FFT(Vignette):
         ctx.rectangle(bx, 620, max(2, L1 / 50000 * 50), 16)
         ctx.fill()
         draw_text(ctx, "快 50000 倍", bx, 700, size=40, font="sans", weight=700, color=GOLD,
-                  alpha=smooth((lt - 2.6) / 0.4), anchor="left", glow=8, glow_alpha=0.4)
+                  alpha=smooth((lt - 1.7) / 0.4), anchor="left", glow=8, glow_alpha=0.4)
+        draw_text(ctx, "高斯 · 1805（手稿，1866 年才出版）", bx, 770, size=20, font="sans", weight=400,
+                  color=(0.85, 0.9, 1.0), alpha=0.8 * smooth((lt - 2.2) / 0.4), anchor="left")
         vignette_title(ctx, lt, "FFT", "COOLEY–TUKEY · 1965", "快速傅里叶变换", y=150)
 
 
+# ---------------------------------------------------------------------- Fourier optics: Webb's diffraction spikes
+class Optics(Vignette):
+    def prepare(self):
+        N = 512
+        yy, xx = np.mgrid[0:N, 0:N] - N / 2
+        ap = np.zeros((N, N), np.float32)
+        d = 22.0  # hexagon flat-to-flat (px)
+
+        def hexmask(cx, cy):
+            x, y = np.abs(xx - cx), np.abs(yy - cy)
+            r = d / 2 * 0.96
+            return (y <= r) & (x * math.sqrt(3) / 2 + y / 2 <= r)
+
+        centres = []
+        for q in range(-2, 3):
+            for r in range(-2, 3):
+                s = -q - r
+                ring = max(abs(q), abs(r), abs(s))
+                if 1 <= ring <= 2:
+                    cx = d * (q + r / 2) * 1.0
+                    cy = d * math.sqrt(3) / 2 * r
+                    centres.append((cy, cx))
+        for cx, cy in centres:
+            ap[hexmask(cx, cy)] = 1.0
+        ap[(np.abs(xx) < 1.2) & (yy < 0)] = 0.0  # a strut
+        self.ap = ap
+        F = (np.abs(np.fft.fftshift(np.fft.fft2(ap))) ** 2).astype(np.float32)
+        # broadband starlight: average the pattern over a range of wavelengths (radial rescaling)
+        acc = np.zeros_like(F)
+        for sc in np.linspace(0.6, 1.4, 24):
+            M = cv2.getRotationMatrix2D((N / 2, N / 2), 0, sc)
+            acc += cv2.warpAffine(F, M, (N, N), flags=cv2.INTER_LINEAR)
+        psf = np.log1p(acc / acc.max() * 1e7)
+        psf = psf / psf.max()
+        c = psf[N // 2 - 160:N // 2 + 160, N // 2 - 160:N // 2 + 160]
+        self.psf = np.clip((c - 0.3) / 0.7, 0, 1) ** 1.3
+        crop = ap[N // 2 - 80:N // 2 + 80, N // 2 - 80:N // 2 + 80]
+        self.ap_vis = crop
+
+    def draw(self, cv, t, lt):
+        ctx = cv.ctx
+        background(ctx, t, dust=0.3)
+        a = smooth(lt / 0.4)
+        vis = apply_lut(self.ap_vis * 0.85, LUT_GOLD)
+        paint_image(ctx, surface_from_array(vis), 520, 540, 440, 440, a)
+        draw_text(ctx, "镜面（孔径）", 520, 800, size=24, font="sans", weight=500, color=GOLD, alpha=a)
+        b = ease_out((lt - 0.5) / 0.5, 2)
+        if b > 0:
+            arrow(ctx, 790, 540, lerp(790, 1010, b), 540, WHITE, 0.8 * b, 2.5, 16)
+            draw_math(ctx, r"$|\mathcal{F}|^2$", 900, 495, size=34, color=WHITE, alpha=b)
+        r = smooth((lt - 0.9) / 0.7)
+        if r > 0:
+            vis = apply_lut(self.psf * r, LUT_ICE)
+            paint_image(ctx, surface_from_array(vis), 1380, 540, 560, 560, 1.0)
+            draw_text(ctx, "星点的衍射图", 1380, 860, size=24, font="sans", weight=500, color=CYAN, alpha=r)
+        vignette_title(ctx, lt, "傅里叶光学", "FOURIER OPTICS · JWST", "透镜以光速完成傅里叶变换")
+
+
+# ---------------------------------------------------------------------- spherical harmonics
+class SphHarm(Vignette):
+    L = 3
+
+    def prepare(self):
+        from scipy.special import sph_harm_y
+        self.shapes = {}
+        th = np.linspace(0, np.pi, 25)
+        ph = np.linspace(0, 2 * np.pi, 33)
+        TH, PH = np.meshgrid(th, ph, indexing="ij")
+        for l in range(self.L + 1):
+            for m in range(-l, l + 1):
+                Y = sph_harm_y(l, abs(m), TH, PH)
+                if m < 0:
+                    Yr = math.sqrt(2) * (-1) ** m * Y.imag
+                elif m > 0:
+                    Yr = math.sqrt(2) * (-1) ** m * Y.real
+                else:
+                    Yr = Y.real
+                R = np.abs(Yr)
+                R = R / (R.max() + 1e-9)
+                P = np.stack([R * np.sin(TH) * np.cos(PH), R * np.cos(TH), R * np.sin(TH) * np.sin(PH)], -1)
+                self.shapes[(l, m)] = (P, np.sign(Yr))
+
+    def draw(self, cv, t, lt):
+        ctx = cv.ctx
+        background(ctx, t, dust=0.4, hue=(0.03, 0.03, 0.10))
+        yaw = 0.6 + lt * 0.7
+        size = 105.0
+        for l in range(self.L + 1):
+            y = 250 + l * 185
+            for m in range(-l, l + 1):
+                x = 1030 + m * 190
+                a = smooth((lt - 0.1 * l - 0.03 * abs(m)) / 0.35)
+                if a <= 0:
+                    continue
+                cam = Camera(yaw, 0.35, 5.2, center=(x, y), fov=30)
+                cam.focal *= size / (H / 2) * 0.95
+                P, sg = self.shapes[(l, m)]
+                for i in range(0, P.shape[0], 2):
+                    row, sr = P[i], sg[i]
+                    for j in range(0, P.shape[1] - 1, 2):
+                        k = min(P.shape[1], j + 3)
+                        col = CYAN if sr[j] >= 0 else MAGENTA
+                        line3(ctx, cam, row[j:k], col, 1.1, 0.8 * a)
+                for j in range(0, P.shape[1], 3):
+                    col_line = P[:, j]
+                    s_line = sg[:, j]
+                    for i in range(0, P.shape[0] - 1, 2):
+                        k = min(P.shape[0], i + 3)
+                        col = CYAN if s_line[i] >= 0 else MAGENTA
+                        line3(ctx, cam, col_line[i:k], col, 1.1, 0.8 * a)
+            draw_text(ctx, f"l = {l}", 250, y, size=22, font="latin", weight=500, color=WHITE, alpha=0.7)
+        vignette_title(ctx, lt, "球谐函数", "SPHERICAL HARMONICS", "球面上的傅里叶级数", x=110, y=110)
+
+
+# ---------------------------------------------------------------------- tides
+class Tides(Vignette):
+    COMP = [("M2", 12.42, 1.00), ("S2", 12.00, 0.46), ("N2", 12.66, 0.19), ("K1", 23.93, 0.58), ("O1", 25.82, 0.41)]
+    DAYS = 30.0
+
+    def draw(self, cv, t, lt):
+        ctx = cv.ctx
+        background(ctx, t, dust=0.4, hue=(0.02, 0.05, 0.09))
+        u1 = smoother((lt - 0.4) / 1.6)
+        cam = Camera(lerp(-0.7, -0.05, u1), lerp(0.45, 0.08, u1), 17.0, target=(0, 0.6, lerp(3.0, 0.0, u1)), fov=36)
+        hrs = np.linspace(0, self.DAYS * 24, 1800)
+        X = (hrs / (self.DAYS * 24) - 0.5) * 12.0
+        total = np.zeros_like(hrs)
+        collapse = u1
+        for i, (nm, per, amp) in enumerate(self.COMP):
+            y = amp * np.cos(2 * np.pi * hrs / per + i)
+            total += y
+            z = lerp(1.4 * (i + 1), 0.0, collapse)
+            col = hsv(0.5 + 0.08 * i, 0.7, 1.0)
+            line3(ctx, cam, np.stack([X, y * 0.8, np.full_like(X, z)], 1), col, 1.4, 0.7 * (1 - 0.8 * collapse))
+            px, py, _ = cam.project(np.array([[6.3, 0, z]]))
+            draw_text(ctx, f"{nm}  {per:.2f} h", px[0] + 10, py[0], size=18, font="mono", weight=500, color=col,
+                      alpha=0.9 * (1 - collapse), anchor="left")
+        line3(ctx, cam, np.stack([X, total * 0.8, np.zeros_like(X)], 1), WHITE, 2.4, 0.4 + 0.6 * collapse)
+        a = smooth((lt - 1.9) / 0.4)
+        if a > 0:
+            # spring tides where M2 and S2 line up, neap tides half a beat later
+            dw = 2 * np.pi * (1 / 12.00 - 1 / 12.42)
+            beat = 2 * np.pi / dw / 24
+            d0 = ((2 * np.pi - 1.0) % (2 * np.pi)) / dw / 24  # phase offset of S2 is 1 rad
+            marks = []
+            for k in range(3):
+                marks += [(d0 + k * beat, "大潮"), (d0 + (k + 0.5) * beat, "小潮")]
+            marks = [(d, lab) for d, lab in marks if 0.5 < d < self.DAYS - 0.5]
+            for d, lab in marks:
+                x = (d / self.DAYS - 0.5) * 12.0
+                px, py, _ = cam.project(np.array([[x, 2.4, 0]]))
+                draw_text(ctx, lab, px[0], py[0], size=22, font="sans", weight=600, color=GOLD, alpha=a)
+            draw_text(ctx, "30 天", 1700, 760, size=18, font="sans", weight=400, color=WHITE, alpha=0.6 * a,
+                      anchor="right")
+        vignette_title(ctx, lt, "潮汐", "TIDES · KELVIN 1872", "开尔文潮汐预测机：用滑轮把正弦波加起来")
+
+
 def beyond_scenes():
-    cls = {"prism": Prism, "dna": DNA, "mri": MRI, "gw": GW, "wifi": WiFi, "quantum": Quantum, "ai": AIPos, "fft": FFT}
+    cls = {"prism": Prism, "optics": Optics, "dna": DNA, "mri": MRI, "gw": GW, "sph": SphHarm, "tides": Tides,
+           "wifi": WiFi, "quantum": Quantum, "ai": AIPos, "fft": FFT}
     out = [BeyondHeader()]
     for name, t0 in S.VIGNETTES:
-        sc = cls[name](t0)
-        out.append(sc)
-    out[-1].fade_out = 0.6
+        out.append(cls[name](t0))
     return out

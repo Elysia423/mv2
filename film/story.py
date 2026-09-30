@@ -7,43 +7,49 @@ BAR = 4 * BEAT
 
 # ------------------------------------------------------------------ section boundaries (seconds, 120 BPM)
 T_COLD = 0.0
-T_TITLE = 16.0
-T_CIRCLES = 24.0
-T_DRAW = 48.0
-T_SOUND = 80.0
-T_EAR = 88.0
-T_DROP = 96.0
-T_IMAGE = 112.0
-T_BEYOND = 144.0
-VIGNETTES = [
-    ("prism", 148.0),
-    ("dna", 154.0),
-    ("mri", 160.0),
-    ("gw", 166.0),
-    ("wifi", 172.0),
-    ("quantum", 178.0),
-    ("ai", 184.0),
-    ("fft", 190.0),
-]
-T_HEAT = 196.0
-T_MONTAGE = 204.0
-T_FINALE = 212.0
-T_END = 232.0
+T_TITLE = 12.0
+T_EULER = 18.0
+T_SQUARE = 22.0
+T_TF3D = 30.0
+T_PANELS = 42.0
+T_BUTTERFLY = 48.0
+T_QUICK = 58.0
+T_PTOLEMY = 62.0
+T_CHORD = 66.0
+T_WIND = 72.0
+T_EAR = 80.0
+T_SHAZAM = 84.0
+T_DROP = 88.0
+T_NOISE = 94.5
+T_WAVES2D = 100.0
+T_IMGBUILD = 104.0
+T_SPEC3D = 112.0
+T_FILTER = 118.0
+T_JPEG = 124.0
+T_BEYOND = 130.0
+VIGNETTE_NAMES = ["prism", "optics", "dna", "mri", "gw", "sph", "tides", "wifi", "quantum", "ai", "fft"]
+VIGNETTES = [(n, 134.0 + 4.0 * i) for i, n in enumerate(VIGNETTE_NAMES)]
+T_GW = dict(VIGNETTES)["gw"]
+GW_MERGE = T_GW + 3.0
+T_LAPLACE = 178.0
+T_WAVELET = 184.0
+T_HEAT = 190.0
+T_MONTAGE = 198.0
+T_FINALE = 206.0
+T_END = 226.0
 DURATION = T_END
 
-IMPACTS = [16.0, 64.0, 96.0, 144.0, 212.0]
+IMPACTS = [T_TITLE, 50.0, T_DROP, T_BEYOND, T_FINALE]
 
 # ------------------------------------------------------------------ chapter 1: circles -> waves
 # number of circles over time (visual chain length == number of audible harmonics)
 C1_COUNT_KEYS = [
-    (24.0, 1), (29.5, 1), (30.0, 2), (30.5, 3), (31.0, 4), (31.5, 5), (32.0, 6), (33.0, 8), (34.0, 11),
-    (35.0, 16), (36.0, 24), (37.0, 36), (38.0, 60),
+    (18.0, 1), (23.5, 2), (24.0, 3), (24.5, 4), (25.0, 5), (25.5, 7), (26.0, 10), (26.5, 15),
+    (27.0, 24), (27.5, 40), (28.0, 60),
 ]
-C1_SAW = 40.0     # morph square -> saw
-C1_ECG = 43.0     # morph saw -> heartbeat
-C1_MORPH = 0.8
-HEART_PERIOD = 1.0
-HEART_BEATS = [43.9 + i * HEART_PERIOD for i in range(4)]  # QRS peak times
+C1_SAW = 36.0     # morph square -> saw
+C1_ECG = 38.0     # morph saw -> heartbeat
+C1_MORPH = 0.6
 
 
 def c1_count(t):
@@ -101,23 +107,26 @@ def chord_events():
             t += step
             i += 1
 
-    ev.append((0.0, 16.0, "Am"))
-    ev.append((16.0, 20.0, "Am9"))
-    ev.append((20.0, 24.0, "F"))
-    cyc(24.0, 48.0)
-    cyc(48.0, 80.0)
-    ev.append((80.0, 88.0, "Am"))
-    cyc(88.0, 96.0)
-    cyc(96.0, 112.0)
-    cyc(112.0, 144.0)
-    cyc(144.0, 192.0)
-    ev.append((192.0, 196.0, "G"))
-    ev.append((196.0, 200.0, "Am"))
-    ev.append((200.0, 204.0, "F"))
-    ev.append((204.0, 208.0, "C"))
-    ev.append((208.0, 212.0, "G"))
-    cyc(212.0, 228.0)
-    ev.append((228.0, 236.0, "Am9"))
+    ev.append((0.0, 12.0, "Am"))
+    ev.append((12.0, 15.0, "Am9"))
+    ev.append((15.0, 18.0, "F"))
+    cyc(18.0, 42.0)
+    cyc(42.0, 66.0)
+    ev.append((66.0, 80.0, "Am"))
+    cyc(80.0, 88.0)
+    cyc(88.0, 104.0)
+    cyc(104.0, 130.0)
+    cyc(130.0, 150.0)
+    ev.append((150.0, 154.0, "Am"))
+    ev.append((154.0, 158.0, "G"))
+    cyc(158.0, 178.0)
+    cyc(178.0, 190.0)
+    ev.append((190.0, 194.0, "Am"))
+    ev.append((194.0, 198.0, "F"))
+    ev.append((198.0, 202.0, "C"))
+    ev.append((202.0, 206.0, "G"))
+    cyc(206.0, 222.0)
+    ev.append((222.0, 230.0, "Am9"))
     return ev
 
 
@@ -195,19 +204,19 @@ def c1_kactive(t):
 
 def c1_omega(t):
     """Visual rotation speed (rev/s)."""
-    return 0.5 + 0.5 * float(np.clip((t - 42.4) / 0.8, 0, 1))
+    return 0.5 + 0.5 * float(np.clip((t - 37.6) / 0.6, 0, 1))
 
 
-_TH_T = np.arange(24.0, 50.0, 0.001)
+_TH_T = np.arange(18.0, 46.0, 0.001)
 _TH = np.concatenate([[0.0], np.cumsum([2 * np.pi * c1_omega(x) * 0.001 for x in _TH_T[:-1]])])
 
 
 def c1_theta(t):
-    return float(np.interp(t, _TH_T, _TH)) + (2 * np.pi * 0.5 * (t - 24.0) if t < 24.0 else 0.0)
+    return float(np.interp(t, _TH_T, _TH)) + (2 * np.pi * 0.5 * (t - 18.0) if t < 18.0 else 0.0)
 
 
 def heart_beats():
     """Times at which the ECG R-peak passes (for the heartbeat sound)."""
     u = _TH / (2 * np.pi) - ECG_PEAK_U
     idx = np.where(np.floor(u[1:]) > np.floor(u[:-1]))[0]
-    return [float(_TH_T[i]) for i in idx if _TH_T[i] > C1_ECG + 0.3 and _TH_T[i] < T_DRAW - 0.2]
+    return [float(_TH_T[i]) for i in idx if _TH_T[i] > C1_ECG + 0.3 and _TH_T[i] < T_PANELS - 0.2]

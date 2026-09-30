@@ -1,10 +1,12 @@
-"""Chapter 4: images are waves too -- progressive reconstruction, filtering, JPEG."""
+"""Chapter 4: images are waves too -- 2D ripples in 3D, reconstruction, the spectrum in 3D, filters, JPEG."""
 import math
 
 import cairo
 import numpy as np
 
-from ..core import (CYAN, GOLD, H, LUT_ICE, MAGENTA, W, WHITE, apply_lut, background, clamp, draw_text, ease_out,
+from .. import story as S
+from ..three import Camera, solid_surface, wire_surface
+from ..core import (CYAN, GOLD, H, LUT_ICE, MAGENTA, VIOLET, W, WHITE, smoother, apply_lut, background, clamp, draw_text, ease_out,
                     lerp, mix, paint_image, text_width, rounded_rect, set_rgba, smooth, surface_from_array, window)
 from ..data import image
 from .base import Scene
@@ -16,13 +18,21 @@ def _to_bgra(rgb):
     return np.clip(rgb, 0, 1)
 
 
-class Images(Scene):
-    start, end = 112.0, 143.6
-    fade_in = 0.4
-    fade_out = 0.5
+class ImageBase(Scene):
+    """Shared data for the image shots (computed once per process)."""
+    fade_in = 0.3
+    fade_out = 0.3
     bloom = 0.22
+    _shared = None
 
     def prepare(self):
+        if ImageBase._shared is not None:
+            self.__dict__.update(ImageBase._shared)
+            return
+        self._prepare()
+        ImageBase._shared = dict(self.__dict__)
+
+    def _prepare(self):
         img = image("chelsea", (IH, IW), gray=False)[..., :3]
         self.img = img
         self.F = np.fft.fft2(img, axes=(0, 1))
@@ -52,15 +62,16 @@ class Images(Scene):
 
     # ------------------------------------------------------------------ helpers
     def K_of_t(self, t):
-        if t < 116.0:
-            return int(1 + (t - 112.0) / 4.0 * 7)  # 1..8, slowly
+        t0 = S.T_IMGBUILD
+        if t < t0 + 2.0:
+            return int(1 + (t - t0) / 2.0 * 7)  # 1..8, slowly
         one = int(self.ntot * 0.01)
-        if t < 121.0:
-            u = (t - 116.0) / 5.0
+        if t < t0 + 4.2:
+            u = (t - t0 - 2.0) / 2.2
             return int(8 * (one / 8) ** u)
-        if t < 124.0:
+        if t < t0 + 6.0:
             return one
-        u = clamp((t - 124.0) / 3.5)
+        u = clamp((t - t0 - 6.0) / 1.6)
         return int(one * (self.ntot / one) ** (u ** 1.2))
 
     def recon(self, K):
@@ -123,15 +134,16 @@ class Images(Scene):
         draw_text(ctx, "个波", x - w / 2 + 14 + text_width(f"{K:,}", 52, "latin", 300), y - h / 2 - 56, size=22, font="sans",
                   weight=500, color=GOLD, alpha=a, anchor="left")
         draw_text(ctx, f"{pct:.3f} %" if pct < 1 else f"{pct:.1f} %", x + w / 2, y - h / 2 - 58, size=30, font="mono", weight=300,
-                  color=GOLD if 120.8 < t < 124.2 else WHITE, alpha=a, anchor="right")
+                  color=GOLD if S.T_IMGBUILD + 4.1 < t < S.T_IMGBUILD + 6.1 else WHITE, alpha=a, anchor="right")
 
     def part_filter(self, ctx, t, a):
-        lp = t < 132.0
+        t0 = S.T_FILTER
+        lp = t < t0 + 2.9
         if lp:
-            u = ease_out((t - 128.3) / 3.2, 2)
+            u = ease_out((t - t0 - 0.2) / 2.4, 2)
             rad = lerp(0.5, 0.012, u)
         else:
-            u = ease_out((t - 132.2) / 3.2, 2)
+            u = ease_out((t - t0 - 3.0) / 2.4, 2)
             rad = lerp(0.0, 0.06, u)
         soft = max(rad * 0.25, 0.003)
         if lp:
@@ -170,11 +182,12 @@ class Images(Scene):
     def part_jpeg(self, ctx, t, a):
         # 8x8 DCT basis grid
         gx, gy, cell = 470.0, 470.0, 58.0
-        n_show = int(clamp((t - 136.2) / 2.2) * 64)
+        t0 = S.T_JPEG
+        n_show = int(clamp((t - t0 - 0.2) / 1.8) * 64)
         for q, (i, j) in enumerate(self.zigzag):
             if q >= n_show:
                 break
-            pop = ease_out(clamp((t - 136.2 - q * 2.2 / 64) / 0.3), 3)
+            pop = ease_out(clamp((t - t0 - 0.2 - q * 1.8 / 64) / 0.3), 3)
             yy, xx = np.mgrid[0:16, 0:16] + 0.5
             b = np.cos(np.pi * i * yy / 16) * np.cos(np.pi * j * xx / 16)
             tile = apply_lut((b * 0.5 + 0.5), LUT_ICE)
@@ -183,9 +196,9 @@ class Images(Scene):
             s = cell * (0.6 + 0.4 * pop)
             self.draw_rgb(ctx, tile, cx, cy, s, s, a * pop, nearest=False)
         draw_text(ctx, "64 种波纹", gx, gy + 4.4 * (cell + 4) + 20, size=24, font="sans", weight=500, color=CYAN,
-                  alpha=a * smooth((t - 137.0) / 0.5))
+                  alpha=a * smooth((t - t0 - 0.8) / 0.5))
         # blockwise reconstruction with the first n zigzag coefficients
-        ncoef = 1 + int(round(ease_out((t - 138.6) / 2.8, 2) * 9))
+        ncoef = 1 + int(round(ease_out((t - t0 - 2.2) / 2.4, 2) * 9))
         mask = np.zeros((8, 8))
         for (i, j) in self.zigzag[:ncoef]:
             mask[i, j] = 1
@@ -195,19 +208,113 @@ class Images(Scene):
         self.draw_rgb(ctx, np.clip(rec, 0, 1), x, y, w, h, a, nearest=ncoef < 3)
         self.frame(ctx, x, y, w, h, a)
         draw_text(ctx, f"每个 8×8 方块：{ncoef} / 64 种波纹", x, y + h / 2 + 44, size=22, font="sans", weight=500,
-                  color=GOLD, alpha=a * smooth((t - 138.4) / 0.4))
+                  color=GOLD, alpha=a * smooth((t - t0 - 2.0) / 0.4))
         draw_text(ctx, "JPEG", x - w / 2, y - h / 2 - 44, size=34, font="latin", weight=700, color=WHITE, alpha=a,
                   anchor="left", tracking=0.2)
+
+
+
+class Waves3D(ImageBase):
+    """A few 2D plane waves as 3D surfaces, then their sum."""
+    start, end = S.T_WAVES2D, S.T_IMGBUILD
+    bloom = 0.9
+    WAVES = [((1.0, 0.0), 1.0), ((0.6, 1.4), 0.6), ((-1.7, 0.9), 0.4)]
+
+    def surf(self, X, Z, i, t):
+        (kx, kz), a = self.WAVES[i]
+        return 0.55 * a * np.cos(kx * X + kz * Z + t * 1.2 + i)
+
+    def color(self, v):
+        u = clamp((v + 0.9) / 1.8)
+        return mix((0.1, 0.3, 1.0), mix(CYAN, GOLD, u), u)
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.5)
-        a1 = window(t, 112.0, 128.0, 0.6, 0.4)
-        a2 = window(t, 128.0, 136.0, 0.4, 0.4)
-        a3 = window(t, 136.0, 143.6, 0.4, 0.4)
-        if a1 > 0:
-            self.part_build(ctx, t, a1)
-        if a2 > 0:
-            self.part_filter(ctx, t, a2)
-        if a3 > 0:
-            self.part_jpeg(ctx, t, a3)
+        n = 34
+        g = np.linspace(-2.6, 2.6, n)
+        X, Z = np.meshgrid(g, g)
+        merge = smoother((lt - 1.7) / 1.3)
+        cam = Camera(0.55 - 0.25 * lt / 4, 0.6, 16.5, target=(0, 0, 0), fov=40)
+        offs = [-6.2, 0.0, 6.2]
+        if merge < 1:
+            for i in range(3):
+                Y = self.surf(X, Z, i, t)
+                cam_i = Camera(0.55 - 0.25 * lt / 4, 0.6, 16.5, target=(-offs[i] * (1 - merge), 0, 0), fov=40)
+                col = [CYAN, VIOLET, MAGENTA][i]
+                wire_surface(ctx, cam_i, X, Y, Z, lambda v, c=col: c, 1.0, 0.8 * (1 - merge), every=1)
+        if merge > 0:
+            Y = sum(self.surf(X, Z, i, t) for i in range(3))
+            solid_surface(ctx, cam, X, Y * merge, Z, self.color, edge_alpha=0.8 * merge, fill_alpha=0.85 * merge,
+                          width=1.0)
+        a = 1 - smooth((lt - 1.5) / 0.4)
+        for i, x in enumerate([420, 960, 1500]):
+            draw_text(ctx, ["低频 · 横向", "中频 · 斜向", "高频 · 斜向"][i], x, 820, size=22, font="sans", weight=500,
+                      color=[CYAN, VIOLET, MAGENTA][i], alpha=a)
+        draw_text(ctx, "叠加 = 一张“图像”", W / 2, 150, size=30, font="sans", weight=600, color=GOLD,
+                  alpha=smooth((lt - 2.4) / 0.5), tracking=0.1)
+
+
+class ImageBuild(ImageBase):
+    start, end = S.T_IMGBUILD, S.T_SPEC3D
+
+    def draw(self, cv, t, lt):
+        background(cv.ctx, t, dust=0.5)
+        self.part_build(cv.ctx, t, 1.0)
+
+
+class Spectrum3D(ImageBase):
+    """The photo's log-magnitude spectrum as a 3D landscape."""
+    start, end = S.T_SPEC3D, S.T_FILTER
+    bloom = 0.9
+
+    def prepare(self):
+        super().prepare()
+        sp = self.spec_img
+        h, w = sp.shape
+        c = sp[h // 2 - 120:h // 2 + 120, w // 2 - 120:w // 2 + 120]
+        # max-pool so the thin bright cross survives the downsampling
+        self.grid = c.reshape(60, 4, 60, 4).max(axis=(1, 3))
+
+    def color(self, v):
+        u = clamp(v / 3.0)
+        if u < 0.4:
+            return mix((0.05, 0.15, 0.6), CYAN, u / 0.4)
+        return mix(CYAN, WHITE, (u - 0.4) / 0.6)
+
+    def draw(self, cv, t, lt):
+        ctx = cv.ctx
+        background(ctx, t, dust=0.4)
+        g = np.linspace(-4.0, 4.0, 60)
+        X, Z = np.meshgrid(g, g)
+        grow = ease_out(lt / 1.2, 3)
+        Y = 3.0 * self.grid ** 2.2 * grow
+        cam = Camera(0.4 + 0.35 * lt / 6, 0.55 - 0.02 * lt, 13.0, target=(0, 0.6, 0), fov=40)
+        solid_surface(ctx, cam, X, Y, Z, self.color, edge_alpha=0.7, fill_alpha=0.9, width=0.9)
+        # the photo in the corner
+        self.draw_rgb(ctx, self.img, 1650, 230, 300, 200, smooth(lt / 0.5))
+        self.frame(ctx, 1650, 230, 300, 200, 1.0)
+        a = smooth((lt - 0.8) / 0.5)
+        px, py, _ = cam.project(np.array([[0, 3.3, 0], [3.6, 0.3, 0]]))
+        draw_text(ctx, "低频（中心）", px[0], py[0] - 20, size=22, font="sans", weight=500, color=GOLD, alpha=a)
+        draw_text(ctx, "高频", px[1] + 10, py[1], size=20, font="sans", weight=500, color=CYAN, alpha=a, anchor="left")
+
+
+class Filter(ImageBase):
+    start, end = S.T_FILTER, S.T_JPEG
+
+    def draw(self, cv, t, lt):
+        background(cv.ctx, t, dust=0.5)
+        self.part_filter(cv.ctx, t, 1.0)
+
+
+class JPEG(ImageBase):
+    start, end = S.T_JPEG, S.T_BEYOND - 0.2
+
+    def draw(self, cv, t, lt):
+        background(cv.ctx, t, dust=0.5)
+        self.part_jpeg(cv.ctx, t, 1.0)
+
+
+def image_scenes():
+    return [Waves3D(), ImageBuild(), Spectrum3D(), Filter(), JPEG()]

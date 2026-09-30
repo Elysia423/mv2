@@ -1,91 +1,94 @@
-"""Heat (the origin), the flash-cut montage and the finale."""
+"""The heat equation in 3D (the origin), the flash-cut montage and the finale."""
 import math
 
 import cairo
 import numpy as np
 
+from .. import story as S
 from ..core import (CYAN, GOLD, H, LUT_FIRE, MAGENTA, ORANGE, VIOLET, W, WHITE, apply_lut, background, circle, clamp,
                     draw_math, draw_text, draw_text_chars, ease_out, ease_out_expo, glow_dot, hsv, lerp, mix,
-                    paint_image, polyline, set_rgba, smooth, stroke_poly, surface_from_array, window)
+                    paint_image, polyline, set_rgba, smooth, smoother, stroke_poly, surface_from_array, window)
 from ..data import beat_pulse
+from ..three import Camera, axis3, line3, solid_surface
 from .base import Scene
 
 
-class Heat(Scene):
-    start, end = 196.0, 204.0
-    fade_in = 0.4
+class Heat3D(Scene):
+    """T(x, t) of a hot rod: the surface grows along time; high-frequency wrinkles die first."""
+    start, end = S.T_HEAT, S.T_MONTAGE
+    fade_in = 0.3
     fade_out = 0.1
     bloom = 1.0
-    NM = 80
+    NM = 60
+    NX = 90
+    NT = 44
 
     def prepare(self):
-        x = np.linspace(0, 1, 800)
-        u0 = np.zeros_like(x)
+        x = np.linspace(0, 1, self.NX)
+        xf = np.linspace(0, 1, 800)
+        u0 = np.zeros_like(xf)
         for a, b, v in [(0.10, 0.2, 1.0), (0.33, 0.37, 0.85), (0.52, 0.66, 0.95), (0.78, 0.8, 1.0), (0.86, 0.9, 0.7)]:
-            u0[(x >= a) & (x <= b)] = v
+            u0[(xf >= a) & (xf <= b)] = v
         n = np.arange(1, self.NM + 1)
-        S = np.sin(np.pi * np.outer(x, n))
-        self.b = 2 * np.trapezoid(u0[:, None] * S, x, axis=0)
-        self.S = S
+        self.b = 2 * np.trapezoid(u0[:, None] * np.sin(np.pi * np.outer(xf, n)), xf, axis=0)
+        self.S = np.sin(np.pi * np.outer(x, n))
+        taus = np.concatenate([[0.0], np.geomspace(2e-5, 0.06, self.NT - 1)])
+        self.taus = taus
+        self.T = np.array([np.clip(self.S @ (self.b * np.exp(-(n * np.pi) ** 2 * tau)), 0, 1.05) for tau in taus])
         self.x = x
 
-    def tau(self, t):
-        if t < 197.6:
-            return 0.0
-        u = clamp((t - 197.6) / 5.6)
-        return 1.5e-5 * (6000 ** u) - 1.5e-5
+    def color(self, v):
+        c = apply_lut(np.array([clamp(v / 1.6)]), LUT_FIRE)[0]
+        return (float(c[0]), float(c[1]), float(c[2]))
 
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, dust=0.4, hue=(0.06, 0.03, 0.03))
-        tau = self.tau(t)
-        n = np.arange(1, self.NM + 1)
-        bn = self.b * np.exp(-(n * np.pi) ** 2 * tau)
-        T = np.clip(self.S @ bn, 0, 1.05)
-        a = smooth(lt / 0.8)
-        x0, x1, ry, rh = 260.0, 1660.0, 540.0, 64.0
-        # rod
-        strip = apply_lut(np.clip(T, 0, 1)[None, :] ** 0.9 * np.ones((8, 1)), LUT_FIRE)
-        paint_image(ctx, surface_from_array(strip), (x0 + x1) / 2, ry, x1 - x0, rh, a)
-        set_rgba(ctx, (0.6, 0.5, 0.5), 0.4 * a)
-        ctx.set_line_width(1.5)
-        ctx.rectangle(x0, ry - rh / 2, x1 - x0, rh)
-        ctx.stroke()
-        # temperature curve
-        xs = x0 + self.x * (x1 - x0)
-        stroke_poly(ctx, np.stack([xs, ry - rh / 2 - 30 - 210 * T], 1), mix(ORANGE, WHITE, 0.3), 2.5, a, glow=1.0)
-        draw_text(ctx, "温度", x0 - 20, ry - rh / 2 - 150, size=20, font="sans", weight=500, color=ORANGE, alpha=0.8 * a,
-                  anchor="right")
-        # modes
-        by = 830.0
-        nb = 40
-        bw = (x1 - x0) / nb
-        amax = np.abs(self.b[:nb]).max()
-        for k in range(nb):
-            v = abs(bn[k]) / amax
-            col = hsv(0.02 + 0.6 * k / nb, 0.8, 1.0)
-            set_rgba(ctx, col, 0.85 * a)
-            ctx.rectangle(x0 + k * bw + bw * 0.2, by - 130 * v, bw * 0.6, 130 * v)
+        grow = clamp((lt - 0.4) / 5.0)
+        k = max(2, int(grow * self.NT))
+        X = np.repeat(((self.x - 0.5) * 9.0)[None, :], k, 0)
+        Z = np.repeat((np.arange(k) * -0.2 + 2.0)[:, None], self.NX, 1)
+        Y = 1.6 * self.T[:k]
+        cam = Camera(0.75 - 0.35 * lt / 8, 0.42, 13.5, target=(0, 0.5, -2.2), fov=40)
+        solid_surface(ctx, cam, X[::-1], Y[::-1], Z[::-1], self.color, edge_alpha=0.55, fill_alpha=0.9, width=0.8)
+        # the current profile at the front edge
+        P = np.stack([X[-1], Y[-1] + 0.02, Z[-1]], 1)
+        line3(ctx, cam, P, WHITE, 2.5, 0.9)
+        axis3(ctx, cam, (-4.8, 0, 2.2), (4.8, 0, 2.2), WHITE, 0.4, 1.2, head=10)
+        axis3(ctx, cam, (-4.8, 0, 2.2), (-4.8, 0, 2.2 - 0.2 * self.NT), WHITE, 0.4, 1.2, head=10)
+        lx, ly, _ = cam.project(np.array([[4.9, 0, 2.2], [-4.9, 0, 2.2 - 0.2 * self.NT - 0.3]]))
+        draw_text(ctx, "位置 x", lx[0] + 10, ly[0], size=20, font="sans", weight=500, color=WHITE, alpha=0.7,
+                  anchor="left")
+        draw_text(ctx, "时间 t", lx[1], ly[1] - 16, size=20, font="sans", weight=500, color=WHITE, alpha=0.7)
+        # mode amplitudes
+        tau = self.taus[k - 1]
+        n = np.arange(1, 31)
+        bn = np.abs(self.b[:30] * np.exp(-(n * np.pi) ** 2 * tau))
+        bx0, by = 1300.0, 860.0
+        amax = np.abs(self.b[:30]).max()
+        for i in range(30):
+            v = bn[i] / amax
+            set_rgba(ctx, hsv(0.02 + 0.6 * i / 30, 0.8, 1.0), 0.85)
+            ctx.rectangle(bx0 + i * 17, by - 110 * v, 11, 110 * v)
             ctx.fill()
-        draw_text(ctx, "低频", x0, by + 26, size=16, font="sans", weight=500, color=WHITE, alpha=0.6 * a, anchor="left")
-        draw_text(ctx, "高频", x1, by + 26, size=16, font="sans", weight=500, color=WHITE, alpha=0.6 * a, anchor="right")
-        ah = smooth((t - 199.5) / 0.6)
-        draw_text(ctx, "高频先消失 → 温度越来越平滑", x1, by - 165, size=22, font="sans", weight=500, color=GOLD,
-                  alpha=0.9 * ah * a, anchor="right")
-        draw_text(ctx, "1807", 1810, 110, size=66, font="latin", weight=200, color=WHITE, alpha=a, anchor="right",
-                  glow=8, glow_alpha=0.3)
-        draw_text(ctx, "《论热的传播》", 1810, 175, size=24, font="serif", weight=600, color=GOLD, alpha=0.9 * a,
-                  anchor="right", tracking=0.1)
-        draw_text(ctx, "MÉMOIRE SUR LA PROPAGATION DE LA CHALEUR", 1810, 210, size=12, font="latin", weight=500,
-                  color=WHITE, alpha=0.5 * a, anchor="right", tracking=0.3)
+        draw_text(ctx, "各频率成分", bx0, by + 24, size=18, font="sans", weight=500, color=WHITE, alpha=0.7,
+                  anchor="left")
+        draw_math(ctx, r"$\frac{\partial T}{\partial t}=\alpha\,\frac{\partial^2 T}{\partial x^2}$", 1560, 190, size=42,
+                  color=WHITE, alpha=smooth((lt - 0.3) / 0.5), glow=6)
+        draw_math(ctx, r"$T(x,t)=\sum_n b_n\,e^{-\alpha n^2\pi^2 t}\,\sin n\pi x$", 1560, 280, size=32,
+                  color=GOLD, alpha=smooth((lt - 1.2) / 0.5), glow=6)
+        draw_text(ctx, "1807", 110, 130, size=66, font="latin", weight=200, color=WHITE, alpha=smooth(lt / 0.5),
+                  anchor="left", glow=8, glow_alpha=0.3)
+        draw_text(ctx, "热方程 · HEAT EQUATION", 114, 190, size=20, font="sans", weight=500, color=GOLD,
+                  alpha=0.9 * smooth(lt / 0.5), anchor="left", tracking=0.1)
 
 
 class Montage(Scene):
-    start, end = 204.0, 212.0
+    start, end = S.T_MONTAGE, S.T_FINALE
     bloom = 0.9
-    SRC = [5.5, 17.2, 30.8, 38.5, 45.0, 56.5, 66.0, 71.0,
-           77.2, 86.9, 90.5, 99.0, 106.5, 121.8, 133.5, 141.5,
-           150.8, 157.2, 163.8, 168.6, 175.0, 181.0, 187.0, 193.5]
+    SRC = [4.5, 20.6, 25.2, 32.6, 40.1, 53.2, 56.8, 61.9,
+           64.6, 77.3, 81.2, 90.6, 97.0, 102.9, 109.2, 116.6,
+           123.1, 139.6, 143.4, 152.9, 155.6, 160.9, 182.6, 188.4]
 
     def __init__(self, scenes):
         self.scenes = scenes
@@ -121,7 +124,7 @@ class Montage(Scene):
 
 
 class Finale(Scene):
-    start, end = 212.0, 232.0
+    start, end = S.T_FINALE, S.T_END
     bloom = 1.0
     KS = [1, -7, 17, -23]
     RS = [200, 150, 60, 25]
@@ -132,7 +135,7 @@ class Finale(Scene):
     def draw(self, cv, t, lt):
         ctx = cv.ctx
         background(ctx, t, strength=1.2, hue=(0.05, 0.04, 0.10))
-        out = 1 - smooth((t - 223.2) / 1.4)
+        out = 1 - smooth((t - 217.2) / 1.4)
         cx, cy = W / 2, 480.0
         # spirograph drawn by epicycles behind the title
         if out > 0:
@@ -177,10 +180,10 @@ class Finale(Scene):
             draw_math(ctx, r"$\hat{f}(\omega)=\int_{-\infty}^{\infty} f(t)\,e^{-i\omega t}\,dt$", cx, cy - 190,
                       size=34, color=(0.8, 0.9, 1.0), alpha=0.8 * out, reveal=ease_out((lt - 6.5) / 1.6, 2), glow=6)
         # bookend: a single circle and its sine wave
-        b = window(t, 224.2, 231.4, 1.2, 1.4)
+        b = window(t, 218.2, 225.4, 1.2, 1.4)
         if b > 0:
             ccx, ccy, R = 700.0, 500.0, 120.0
-            th = 2 * math.pi * 0.5 * (t - 224.2)
+            th = 2 * math.pi * 0.5 * (t - 218.2)
             tx, ty = ccx + R * math.cos(th), ccy - R * math.sin(th)
             circle(ctx, ccx, ccy, R, CYAN, 0.55 * b, width=2)
             ctx.move_to(ccx, ccy)
@@ -189,8 +192,8 @@ class Finale(Scene):
             ctx.set_line_width(2)
             ctx.stroke()
             X0 = 1000.0
-            ts = np.linspace(max(224.2, t - 5.0), t, 300)
-            ys = ccy - R * np.sin(2 * math.pi * 0.5 * (ts - 224.2))
+            ts = np.linspace(max(218.2, t - 5.0), t, 300)
+            ys = ccy - R * np.sin(2 * math.pi * 0.5 * (ts - 218.2))
             xs = X0 + (t - ts) * 170
             stroke_poly(ctx, np.stack([xs, ys], 1), GOLD, 3.0, 0.95 * b, glow=1.0)
             ctx.set_dash([6, 8])
@@ -202,11 +205,11 @@ class Finale(Scene):
             ctx.set_dash([])
             glow_dot(ctx, tx, ty, 5, WHITE, b, 5)
             glow_dot(ctx, X0, ty, 5, GOLD, b, 5)
-            draw_text_chars(ctx, "一切，从一个圆开始", W / 2, 760, t - 225.2, size=38, font="serif", weight=600,
+            draw_text_chars(ctx, "一切，从一个圆开始", W / 2, 760, t - 219.2, size=38, font="serif", weight=600,
                             color=WHITE, alpha=b, tracking=0.25, stagger=0.08, dur=0.5)
             draw_text(ctx, "IT ALL BEGINS WITH A CIRCLE", W / 2, 815, size=15, font="latin", weight=500,
-                      color=(0.8, 0.9, 1.0), alpha=0.6 * b * smooth((t - 226.0) / 0.8), tracking=0.4)
-        c = window(t, 227.6, 231.6, 0.8, 1.0)
+                      color=(0.8, 0.9, 1.0), alpha=0.6 * b * smooth((t - 220.0) / 0.8), tracking=0.4)
+        c = window(t, 221.6, 225.6, 0.8, 1.0)
         if c > 0:
             draw_text(ctx, "本片所有画面由代码实时计算生成 · 所有声音由正弦波叠加合成", W / 2, 960, size=20, font="sans",
                       weight=400, color=WHITE, alpha=0.55 * c, tracking=0.12)
@@ -215,4 +218,4 @@ class Finale(Scene):
 
     def effects(self, t, lt):
         return {"flash": 0.8 * math.exp(-lt / 0.22), "chroma": 4 * math.exp(-lt / 0.45),
-                "fade": 1 - smooth((t - 231.0) / 0.9)}
+                "fade": 1 - smooth((t - 225.0) / 0.9)}
